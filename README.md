@@ -9,11 +9,9 @@
 > (\* indicates equal contribution)
 > arXiv'2026.
 
-## Teaser Video
+## 🎬 Teaser Video
 
-<video src="docs/videos/demo.mp4" controls width="100%"></video>
-
-[▶ Watch the teaser video](docs/videos/demo.mp4)
+https://github.com/user-attachments/assets/f794c512-0043-4700-be6a-932fec75248d
 
 ## About FlashSAC
 
