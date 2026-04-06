@@ -1,6 +1,7 @@
 <h1><img src="docs/images/icon/flashsac_logo.svg" alt="FlasahSAC" height="60"></h1>
 
 Official implementation of 
+
 **FlashSAC: Fast and Stable Off-Policy Reinforcement Learning for High-Dimensional Robot Control**
 
 [![Project Page](https://img.shields.io/badge/Project_Page-Visit-blue.svg)](https://holiday-robot.github.io/FlashSAC/)
