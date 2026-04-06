@@ -32,7 +32,7 @@
             <!-- Authors -->
             <div class="authors">
                 <div>
-                    <span class="author"><a href="https://i-am-proto.github.io/" target="_blank" rel="noopener noreferrer">Donghu Kim</a><sup>1,2*</sup></span>
+                    <span class="author"><a href="https://i-am-proto.github.io/" target="_blank" rel="noopener noreferrer">Donghu Kim</a><sup>1*</sup></span>
                     <span class="author"><a href="https://leeyngdo.github.io/" target="_blank" rel="noopener noreferrer">Youngdo Lee</a><sup>2,3*</sup></span>
                     <span class="author"><a href="https://pmh9960.github.io/" target="_blank" rel="noopener noreferrer">Minho Park</a><sup>2</sup></span>
                     <span class="author"><a href="https://kinam0252.github.io/" target="_blank" rel="noopener noreferrer">Kinam Kim</a><sup>2</sup></span>
@@ -48,7 +48,7 @@
                     <span class="author"><a href="https://www.csc.kth.se/~dani/" target="_blank" rel="noopener noreferrer">Danica Kragic</a><sup>7</sup></span>
                     <span class="author"><a href="https://www.ias.informatik.tu-darmstadt.de/Member/JanPeters" target="_blank" rel="noopener noreferrer">Jan Peters</a><sup>5,6,8</sup></span>
                     <span class="author"><a href="https://sites.google.com/site/jaegulchoo/" target="_blank" rel="noopener noreferrer">Jaegul Choo</a><sup>2</sup></span>
-                    <span class="author"><a href="https://joonleesky.github.io/" target="_blank" rel="noopener noreferrer">Hojoon Lee</a><sup>1,2</sup></span>
+                    <span class="author"><a href="https://joonleesky.github.io/" target="_blank" rel="noopener noreferrer">Hojoon Lee</a><sup>1</sup></span>
                 </div>
             </div>
 
@@ -315,7 +315,7 @@
             </div>
 
             <p style="margin-top: 20px;">
-                In high-dimensional settings, target values at next state-action pairs \((s', a')\) are often poorly covered by the replay buffer, and since targets depend on the critic's own predictions, small errors compound through repeated bootstrapping. <span class="flashsac">FlashSAC</span> addresses this by scaling data diversity, constraining update dynamics, and scaling model size once stability is ensured.
+                In high-dimensional settings, target values at next state-action pairs \((s', a')\) are often poorly covered by the replay buffer, and since targets depend on the critic's own predictions, small errors compound through repeated bootstrapping. <span class="flashsac">FlashSAC</span> achieves strong asymptotic performance with fast wall-clock time through three complementary mechanisms: <strong>(i) fast training</strong> by scaling data and model while reducing gradient updates, <strong>(ii) stable training</strong> by constraining critic update dynamics, and <strong>(iii) broad exploration</strong> for diverse data coverage.
             </p>
         </section>
 
@@ -323,53 +323,79 @@
         <section id="algorithm">
             <h2>Algorithm</h2>
 
-            <h3 style="font-size: 1.4rem; margin-top: 10px; margin-bottom: 15px; color: #40BF52;">1. Scaling Data Volume and Diversity</h3>
-            <ul style="margin-left: 20px; margin-top: 15px;">
-                <li><strong>Massively Parallel Simulation (1024 Environments):</strong> Rapid accumulation of diverse trajectories, maintaining adequate coverage across high-dimensional state-action spaces.</li>
-                <li><strong>Large-Capacity Replay Buffer (10M Transitions):</strong> Preserves long-tail experiences with 10× larger capacity than standard buffers.</li>
-                <li><strong>Unified Entropy Target (Task-Agnostic):</strong> Fixed action standard deviation target ensures consistent exploration across different robot embodiments.</li>
-                <li><strong>Noise Repetition (Zeta Distribution):</strong> Repeats sampled noise for \( k \) consecutive steps, inducing temporal correlation without per-environment state — a lightweight alternative to pink noise.</li>
-            </ul>
-
-            <h3 style="font-size: 1.4rem; margin-top: 40px; margin-bottom: 15px; color: #40BF52;">2. Constraining Update Dynamics</h3>
+            <h3 style="font-size: 1.4rem; margin-top: 10px; margin-bottom: 15px; color: #40BF52;">1. Fast Training</h3>
             <p>
-                Explicitly bounds weight, feature, and gradient norms to prevent error amplification under bootstrapped critic updates:
+                On-policy methods such as PPO discard all collected data after each iteration, which becomes a critical bottleneck when simulation is expensive. Off-policy RL reuses past experience from a replay buffer, but conventionally requires many gradient updates per transition to extract sufficient learning signal — slowing wall-clock time and compounding bootstrapping errors. Inspired by scaling trends in supervised learning — where, under a fixed compute budget, larger models trained with larger batches and fewer updates converge faster than smaller models with frequent updates — <span class="flashsac">FlashSAC</span> instead operates in a regime of high data throughput, large models, and infrequent gradient updates, made possible by the stability mechanisms described below.
             </p>
 
             <div class="algo-box">
-                <h4 style="font-size: 1.1rem; margin-bottom: 10px;">Architecture Design</h4>
+                <h4 style="font-size: 1.1rem; margin-bottom: 10px;">Fast Training Components</h4>
                 <ul style="margin-left: 20px;">
-                    <li><strong>Inverted Residual Blocks:</strong> Inspired by Transformers, expands features to higher dimensions then projects back with residual connections</li>
-                    <li><strong>Pre-activation Normalization:</strong> Applies batch normalization before nonlinearities to handle non-stationary replay data</li>
-                    <li><strong>Post-RMS Normalization:</strong> Bounds per-sample feature norms to prevent rare inputs from destabilizing bootstrapping</li>
+                    <li><strong>Massively Parallel Simulation (1024 Environments):</strong> Rapidly accumulates diverse trajectories, maintaining adequate coverage of the state-action space in high-dimensional tasks.</li>
+                    <li><strong>Large-Capacity Replay Buffer (10M Transitions):</strong> An order of magnitude larger than the 1M commonly used in standard off-policy setups, preserving rare but important long-tail experiences and preventing catastrophic forgetting.</li>
+                    <li><strong>Large Model, Large Batch, Fewer Updates:</strong> A 2.5M-parameter, 6-layer network for both actor and critic, paired with batch size 2048 that nearly saturates GPU utilization, and a UTD ratio of 2/1024 — only 2 gradient updates per 1024 new transitions.</li>
+                    <li><strong>Code Optimization:</strong> Implemented in PyTorch with both training and inference JIT-compiled to minimize Python overhead, and mixed-precision training throughout to reduce wall-clock time by 5–10%.</li>
                 </ul>
             </div>
 
             <div style="text-align: center; margin: 25px 0;">
+                <img src="images/fast_ablation.png" alt="Fast Training Ablation" style="max-width: 100%; height: auto;">
+                <p style="font-size: 0.9rem; margin-top: 8px; color: #555;">Ablation of <span class="flashsac">FlashSAC</span>'s fast training components: massively parallel simulation, large replay buffer, large model with large batches and fewer updates, and code optimizations.</p>
+            </div>
+
+            <h3 style="font-size: 1.4rem; margin-top: 40px; margin-bottom: 15px; color: #40BF52;">2. Stable Training</h3>
+            <p>
+                Scaling data and model accelerates training but does not prevent instability arising from bootstrapped critic updates. In the Bellman backup, estimation errors at next-state action pairs propagate into the current Q-value targets and can be recursively amplified through repeated updates. This problem worsens with both state-action dimensionality and model capacity, making stability a prerequisite for scaling. <span class="flashsac">FlashSAC</span> addresses this by constraining weight, feature, and gradient norms throughout training via the following mechanisms.
+            </p>
+
+            <div style="text-align: center; margin: 25px 0;">
                 <img src="images/architecture.png" alt="FlashSAC Architecture" class="architecture-img">
+                <p style="font-size: 0.9rem; margin-top: 8px; color: #555;"><strong><span class="flashsac">FlashSAC</span> Architecture.</strong> The architecture consists of stacked inverted residual blocks with pre-activation batch normalization and post-RMS normalization.</p>
+            </div>
+
+            <div class="algo-box">
+                <h4 style="font-size: 1.1rem; margin-bottom: 10px;">Architecture Design</h4>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Inverted Residual Backbone:</strong> Stacks inverted residual blocks inspired by the Transformer feedforward block — each block expands features to a higher dimension via an inverted bottleneck, projects back to the original dimension, and adds a residual connection to stabilize gradient propagation. After the final block, RMSNorm bounds per-sample feature norms before the value heads, preventing out-of-distribution inputs from producing unbounded activations that destabilize bootstrapping.</li>
+                    <li><strong>Pre-activation Batch Normalization:</strong> Applies batch normalization before each nonlinearity to keep activations well-scaled under non-stationary replay data. We choose batch normalization over layer normalization because it exploits large-batch statistics from diverse replay data, yielding a smoother loss landscape with a lower effective condition number.</li>
+                </ul>
             </div>
 
             <div class="algo-box">
                 <h4 style="font-size: 1.1rem; margin-bottom: 10px;">Training Techniques</h4>
                 <ul style="margin-left: 20px;">
-                    <li><strong>Cross-Batch Value Prediction:</strong> Concatenates current and next transitions into a single batch for consistent normalization statistics</li>
-                    <li><strong>Distributional Critic:</strong> Represents Q-values as categorical distributions over atoms, smoothing the optimization landscape</li>
-                    <li><strong>Adaptive Reward Scaling:</strong> Normalizes rewards to keep returns within fixed support while preserving optimal policy</li>
-                    <li><strong>Weight Normalization:</strong> Projects weight vectors onto unit-norm sphere after each update to prevent uncontrolled weight growth</li>
+                    <li><strong>Cross-Batch Value Prediction:</strong> Batch normalization computes statistics per batch, so predicted and target Q-values would otherwise receive different normalization in separate forward passes. We concatenate current and next-state transitions into a single batch so that both share the same statistics, ensuring consistency in the Bellman update.</li>
+                    <li><strong>Distributional Critic with Adaptive Reward Scaling:</strong> Represents the Q-value as a categorical distribution over \( n_\text{atom} \) atoms uniformly spaced on \( [G_{\min}, G_{\max}] \), trained via cross-entropy against the projected Bellman target — smoothing the optimization landscape and reducing sensitivity to noisy targets. To keep returns within the critic's fixed support, we normalize rewards directly using the running discounted return variance \( \sigma^2_{t,G} \) and maximum magnitude \( G_{t,\max} \):
+                        $$\bar{r}_t = \frac{r_t}{\max\!\left(\sqrt{\sigma_{t,G}^2 + \epsilon},\; G_{t,\max} / G_{\max}\right)}.$$
+                    </li>
+                    <li><strong>Weight Normalization:</strong> After each gradient step, projects each weight vector onto the unit-norm sphere and each normalization parameter vector \( (\gamma, \beta) \) to norm \( \sqrt{d} \), constraining the network to encode information through direction rather than scale.</li>
                 </ul>
             </div>
 
             <div style="text-align: center; margin: 25px 0;">
-                <img src="images/component_ablation.png" alt="Component Ablation Study" style="max-width: 100%; height: auto;">
+                <img src="images/stable_ablation.png" alt="Stable Training Ablation" style="max-width: 100%; height: auto;">
+                <p style="font-size: 0.9rem; margin-top: 8px; color: #555;">Ablation of <span class="flashsac">FlashSAC</span>'s stable training components that constrain weight, feature, and gradient norms throughout training.</p>
             </div>
 
-            <h3 style="font-size: 1.4rem; margin-top: 40px; margin-bottom: 15px; color: #40BF52;">3. Scaling Model for Faster Training</h3>
+            <h3 style="font-size: 1.4rem; margin-top: 40px; margin-bottom: 15px; color: #40BF52;">3. Exploration</h3>
             <p>
-                With stable off-policy learning, scaling laws from supervised learning apply: larger models trained with larger batches and fewer updates converge faster. <span class="flashsac">FlashSAC</span> uses a 2.5M-parameter, 6-layer network with batch size 2048 and a UTD ratio of 2/1024.
+                Off-policy RL decouples data collection from policy optimization, allowing exploration strategies that pursue broad state-action coverage independently of the current policy. <span class="flashsac">FlashSAC</span> employs two complementary mechanisms.
             </p>
 
+            <div class="algo-box">
+                <h4 style="font-size: 1.1rem; margin-bottom: 10px;">Exploration Mechanisms</h4>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Unified Entropy Target:</strong> Rather than tuning the maximum-entropy target per task, parameterizes it via a fixed action standard deviation \( \sigma_\text{tgt} \). For a Gaussian policy with diagonal covariance,
+                        $$\bar{\mathcal{H}} = \tfrac{1}{2}\,|\mathcal{A}|\,\log\!\left(2\pi e\,\sigma_\text{tgt}^2\right),$$
+                        which scales linearly with action dimension and ensures consistent exploration across embodiments. We set \( \sigma_\text{tgt} = 0.15 \) in all experiments.
+                    </li>
+                    <li><strong>Noise Repetition:</strong> A lightweight alternative to pink or Ornstein–Uhlenbeck noise that induces temporal correlation with minimal local state. At each repetition interval, a noise vector \( \epsilon \sim \mathcal{N}(0, I) \) is sampled and held constant for \( k \) consecutive steps, where \( k \) is drawn from a Zeta distribution \( P(k) \propto k^{-s} \) — favoring short repeat intervals while occasionally producing long, correlated action sequences.</li>
+                </ul>
+            </div>
+
             <div style="text-align: center; margin: 30px 0;">
-                <img src="images/hyperparameter_ablation.png" alt="Hyperparameter Ablation Study" style="max-width: 100%; height: auto;">
+                <img src="images/exploration_ablation.png" alt="Exploration Ablation" style="max-width: 100%; height: auto;">
+                <p style="font-size: 0.9rem; margin-top: 8px; color: #555;">Ablation of <span class="flashsac">FlashSAC</span>'s exploration mechanisms: unified entropy target and noise repetition.</p>
             </div>
         </section>
 
