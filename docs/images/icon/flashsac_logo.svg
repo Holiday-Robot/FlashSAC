@@ -1,0 +1,11 @@
+<svg width="100%" viewBox="0 0 680 200" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<linearGradient id="gD" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#66FF99"/>
+<stop offset="40%" stop-color="#2ECC71"/>
+<stop offset="75%" stop-color="#1A9E4F"/>
+<stop offset="100%" stop-color="#0D6B3A"/>
+</linearGradient>
+</defs>
+<text x="340" y="140" text-anchor="middle" font-family="'Helvetica Neue', 'Arial Black', Helvetica, sans-serif" font-size="120" font-weight="800" letter-spacing="-2" fill="url(#gD)" style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Helvetica Neue&quot;, &quot;Arial Black&quot;, Helvetica, sans-serif;font-size:120px;font-weight:800;text-anchor:middle;dominant-baseline:auto">FlashSAC</text>
+</svg>
