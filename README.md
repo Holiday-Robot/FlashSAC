@@ -17,7 +17,7 @@ https://github.com/user-attachments/assets/f794c512-0043-4700-be6a-932fec75248d
 
 **FlashSAC** is a fast and stable off-policy reinforcement learning algorithm that achieves the highest asymptotic performance in the shortest wall-clock time for high-dimensional robotic control.
 
-This repository (**FlashSAC**) provides the full training framework, agent implementations, and environment integrations used in the paper, supporting a wide range of robotics benchmarks including IsaacLab, MuJoCo Playground, ManiSkill, Genesis, HumanoidBench, MyoSuite, Meta-World, and, Deepmind Control Suite.
+This repository (**FlashSAC**) provides the full training framework, agent implementations, and environment integrations used in the paper, supporting **over 100 tasks across diverse simulators**: IsaacLab, MuJoCo Playground, ManiSkill, Genesis, HumanoidBench, MyoSuite, MuJoCo, Meta-World, and DeepMind Control Suite.
 
 If you're using PPO, try **FlashSAC**!
 
