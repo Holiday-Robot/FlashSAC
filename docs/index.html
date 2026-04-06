@@ -341,7 +341,7 @@
 
             <h3 style="font-size: 1.4rem; margin-top: 40px; margin-bottom: 15px; color: #40BF52;">2. Stable Training</h3>
             <p>
-                Scaling alone cannot prevent the instability of bootstrapped critic updates, which worsens with state-action dimensionality and model capacity. <span class="flashsac">FlashSAC</span> stabilizes training by constraining weight, feature, and gradient norms.
+                Scaling alone worsens the stability of bootstrapped critic updates <span class="flashsac">FlashSAC</span> stabilizes training by constraining weight, feature, and gradient norms.
             </p>
 
             <div class="algo-box">
@@ -354,7 +354,7 @@
 
             <div style="text-align: center; margin: 25px 0;">
                 <img src="images/architecture.png" alt="FlashSAC Architecture" class="architecture-img">
-                <p style="max-width: 70%; font-size: 0.9rem; margin-top: 8px; color: #555;"><strong><span class="flashsac">FlashSAC</span> Architecture.</strong> The architecture consists of stacked inverted residual blocks with pre-activation batch normalization and post-RMS normalization.</p>
+                <p style="max-width: 70%; font-size: 0.9rem; margin: 8px auto 0; color: #555;"><strong><span class="flashsac">FlashSAC</span> Architecture.</strong> The architecture consists of stacked inverted residual blocks with pre-activation batch normalization and post-RMS normalization.</p>
             </div>
 
             <div class="algo-box">
@@ -375,7 +375,7 @@
 
             <h3 style="font-size: 1.4rem; margin-top: 40px; margin-bottom: 15px; color: #40BF52;">3. Exploration</h3>
             <p>
-                <span class="flashsac">FlashSAC</span> uses two lightweight mechanisms to broaden state-action coverage.
+                <span class="flashsac">FlashSAC</span> uses two complementary mechanisms to broaden state-action coverage.
             </p>
 
             <div class="algo-box">
