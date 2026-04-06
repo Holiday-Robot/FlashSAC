@@ -1,6 +1,6 @@
 # FlashSAC: Fast and Stable Off-Policy Reinforcement Learning for High-Dimensional Robot Control
 
-[![Project Page](https://img.shields.io/badge/Project_Page-Visit-blue.svg)](https://holiday-robot.github.io/FlashRL/)
+[![Project Page](https://img.shields.io/badge/Project_Page-Visit-blue.svg)](https://holiday-robot.github.io/FlashSAC/)
 [![PDF](https://img.shields.io/badge/PDF-arXiv-b31b1b.svg)](docs/pdf/_RSS_26__FlashSAC.pdf)
 [![Code](https://img.shields.io/badge/Code-GitHub-black.svg)](https://github.com/DAVIAN-Robotics/FlashRL)
 
