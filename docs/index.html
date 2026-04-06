@@ -344,17 +344,17 @@
                 Scaling alone cannot prevent the instability of bootstrapped critic updates, which worsens with state-action dimensionality and model capacity. <span class="flashsac">FlashSAC</span> stabilizes training by constraining weight, feature, and gradient norms.
             </p>
 
-            <div style="text-align: center; margin: 25px 0;">
-                <img src="images/architecture.png" alt="FlashSAC Architecture" class="architecture-img">
-                <p style="font-size: 0.9rem; margin-top: 8px; color: #555;"><strong><span class="flashsac">FlashSAC</span> Architecture.</strong> The architecture consists of stacked inverted residual blocks with pre-activation batch normalization and post-RMS normalization.</p>
-            </div>
-
             <div class="algo-box">
                 <h4 style="font-size: 1.1rem; margin-bottom: 10px;">Architecture Design</h4>
                 <ul style="margin-left: 20px;">
                     <li><strong>Inverted Residual Backbone:</strong> Transformer-style inverted bottleneck blocks with residual connections, followed by RMSNorm to bound per-sample feature norms before the value heads.</li>
                     <li><strong>Pre-activation Batch Normalization:</strong> BN before each nonlinearity keeps activations well-scaled and exploits large-batch statistics for a smoother loss landscape.</li>
                 </ul>
+            </div>
+
+            <div style="text-align: center; margin: 25px 0;">
+                <img src="images/architecture.png" alt="FlashSAC Architecture" class="architecture-img">
+                <p style="max-width: 70%; font-size: 0.9rem; margin-top: 8px; color: #555;"><strong><span class="flashsac">FlashSAC</span> Architecture.</strong> The architecture consists of stacked inverted residual blocks with pre-activation batch normalization and post-RMS normalization.</p>
             </div>
 
             <div class="algo-box">
