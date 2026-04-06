@@ -1,0 +1,49 @@
+##################################################################################
+# Configurations
+##################################################################################
+
+project_name: 'FlashRL'
+entity_name: 'draftrec'
+group_name: 'test'
+exp_name: 'test'
+seed: 0
+
+logger_type: 'tensorboard'  # ['wandb','tensorboard']
+save_path: 'models/${group_name}/${exp_name}/${env.env_name}/seed${seed}-TIMESTAMP'
+agent_load_path: null
+buffer_load_path: null
+
+##################################################################################
+# Environment
+##################################################################################
+
+num_env_steps: 1_000_000
+num_train_envs: 1
+num_eval_envs: 1
+num_record_envs: 1
+
+num_eval_episodes: 50
+num_record_episodes: 1
+
+##################################################################################
+# Training
+##################################################################################
+
+gamma: 0.99 
+n_step: 1
+
+num_interaction_steps: ${eval:'${num_env_steps} / (${num_train_envs})'}
+updates_per_interaction_step: 1
+num_update_steps: ${eval:'${num_interaction_steps} * (${updates_per_interaction_step})'}
+
+evaluation_per_interaction_step: ${eval:'int(${num_interaction_steps} /10)'}  # evaluation frequency per interaction step.
+metrics_per_interaction_step: ${eval:'int(${num_interaction_steps} /10)'}     # log metrics per interaction step.
+recording_per_interaction_step: ${eval:'int(${num_interaction_steps} /1)'}    # video recording frequency per interaction step.
+logging_per_interaction_step: ${eval:'int(${num_interaction_steps} /100)'}    # logging frequency per interaction step.
+save_checkpoint_per_interaction_step: ${eval:'int(${num_interaction_steps})'} # saving agent checkpoint per interaction step.
+save_buffer_per_interaction_step: null                                        # saving replay buffer (disabled by default)
+
+defaults:
+- _self_
+- agent: flashSAC
+- env: mujoco

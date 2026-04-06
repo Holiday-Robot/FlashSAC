@@ -1,0 +1,13 @@
+#!/bin/bash -ex
+
+BLACK_ARG=""
+RUFF_ARG="check --fix"
+
+# use black for the better type annotations
+uv run black -l 120 $BLACK_ARG flash_rl train.py
+
+# formatter and linter
+uv run ruff $RUFF_ARG flash_rl
+
+# type check
+uv run mypy flash_rl train.py

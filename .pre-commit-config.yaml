@@ -1,0 +1,31 @@
+repos:
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.5
+    hooks:
+      - id: codespell
+        args:
+          - --ignore-words-list=null
+        exclude: ^(.*\.ipynb|.*\.html)$
+  
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.2.1
+    hooks:
+      - id: ruff
+        args:
+          - --select=I
+          - --fix
+        exclude: ^.*__init__\.py$
+        pass_filenames: false
+
+      - id: ruff-format
+        exclude: ^.*__init__\.py$
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: uv run mypy flash_rl
+        language: system
+        types: [python]
+        pass_filenames: false

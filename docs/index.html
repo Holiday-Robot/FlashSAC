@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlashSAC: Fast and Stable Off-Policy Reinforcement Learning for High-Dimensional Robot Control</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- KaTeX CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+    <!-- KaTeX JS -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+    <!-- KaTeX auto-render -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"
+        onload="renderMathInElement(document.body);"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <header>
+            <h1 class="title"><span class="flashsac">FlashSAC</span>: Fast and Stable<br class="title-break"> Off-Policy Reinforcement Learning<br class="title-break"> for High-Dimensional Robot Control</h1>
+
+            <!-- TLDR -->
+            <p class="tldr">
+                A fast and stable off-policy RL algorithm that achieves the highest asymptotic performance in the shortest wall-clock time among existing methods for high-dimensional sim-to-real robotic control
+            </p>
+
+            <!-- Authors -->
+            <div class="authors">
+                <div>
+                    <span class="author"><a href="https://i-am-proto.github.io/" target="_blank" rel="noopener noreferrer">Donghu Kim</a><sup>1,2*</sup></span>
+                    <span class="author"><a href="https://leeyngdo.github.io/" target="_blank" rel="noopener noreferrer">Youngdo Lee</a><sup>2,3*</sup></span>
+                    <span class="author"><a href="https://pmh9960.github.io/" target="_blank" rel="noopener noreferrer">Minho Park</a><sup>2</sup></span>
+                    <span class="author"><a href="https://kinam0252.github.io/" target="_blank" rel="noopener noreferrer">Kinam Kim</a><sup>2</sup></span>
+                </div>
+                <div>
+                    <span class="author"><a href="https://takuseno.github.io/" target="_blank" rel="noopener noreferrer">Takuma Seno</a><sup>4</sup></span>
+                    <span class="author"><a href="https://anahrendra.github.io/" target="_blank" rel="noopener noreferrer">I Made Aswin Nahrendra</a><sup>3</sup></span>
+                    <span class="author"><a href="https://seiing.github.io/" target="_blank" rel="noopener noreferrer">Sehee Min</a><sup>1</sup></span>
+                    <span class="author"><a href="https://www.linkedin.com/in/danielpalenicek/" target="_blank" rel="noopener noreferrer">Daniel Palenicek</a><sup>5,6</sup></span>
+                </div>
+                <div>
+                    <span class="author"><a href="https://scholar.google.com/citations?user=PvEf33EAAAAJ&hl=de" target="_blank" rel="noopener noreferrer">Florian Vogt</a><sup>7</sup></span>
+                    <span class="author"><a href="https://www.csc.kth.se/~dani/" target="_blank" rel="noopener noreferrer">Danica Kragic</a><sup>7</sup></span>
+                    <span class="author"><a href="https://www.ias.informatik.tu-darmstadt.de/Member/JanPeters" target="_blank" rel="noopener noreferrer">Jan Peters</a><sup>5,6,8</sup></span>
+                    <span class="author"><a href="https://sites.google.com/site/jaegulchoo/" target="_blank" rel="noopener noreferrer">Jaegul Choo</a><sup>2</sup></span>
+                    <span class="author"><a href="https://joonleesky.github.io/" target="_blank" rel="noopener noreferrer">Hojoon Lee</a><sup>1,2</sup></span>
+                </div>
+            </div>
+
+            <!-- Affiliations -->
+            <div class="affiliations">
+                <span class="affiliation"><sup>1</sup>Holiday Robotics</span>
+                <span class="affiliation"><sup>2</sup>KAIST</span>
+                <span class="affiliation"><sup>3</sup>KRAFTON</span>
+                <span class="affiliation"><sup>4</sup>Turing Inc</span>
+                <span class="affiliation"><sup>5</sup>TU Darmstadt</span>
+                <span class="affiliation"><sup>6</sup>hessian.AI</span>
+                <span class="affiliation"><sup>7</sup>KTH Royal Institute of Technology</span>
+                <span class="affiliation"><sup>8</sup>German Research Center for AI (DFKI)</span>
+                <span class="affiliation">* equal contribution</span>
+            </div>
+        </header>
+
+        <!-- Navigation Links -->
+        <nav class="nav-links">
+            <a href="pdf/_RSS_26__FlashSAC.pdf" class="nav-button" target="_blank" rel="noopener noreferrer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                PDF
+            </a>
+            <a class="nav-button disabled" aria-disabled="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3.842 0a1 1 0 0 0-.922.608c-.153.369-.044.627.294 1.111l6.919 8.36l-1.023 1.106a1.04 1.04 0 0 0 .003 1.423l1.23 1.313l-5.44 6.444c-.28.3-.453.823-.297 1.199a1.025 1.025 0 0 0 .959.635a.91.91 0 0 0 .689-.34l5.783-6.126l7.49 8.005a.85.85 0 0 0 .684.26a.96.96 0 0 0 .877-.615c.158-.377-.017-.75-.306-1.14L13.73 13.9l1.064-1.13a.963.963 0 0 0 .009-1.316L4.633.464S4.26.01 3.867 0zm0 .272h.017c.218.005.487.272.564.364l.005.006l.005.005l10.17 10.99a.69.69 0 0 1-.008.946l-1.066 1.133l-1.498-1.772l-8.6-10.39c-.328-.472-.352-.619-.26-.841a.73.73 0 0 1 .671-.44Zm14.341 1.57a.88.88 0 0 0-.655.242l-5.696 6.158l1.694 1.832l5.309-6.514c.325-.433.479-.66.325-1.029a1.12 1.12 0 0 0-.977-.689m-7.655 12.282l1.318 1.414l-5.786 6.13a.65.65 0 0 1-.496.26a.75.75 0 0 1-.706-.467c-.112-.269.036-.687.244-.909l.005-.005l.005-.006z"/>
+                </svg>
+                arXiv
+            </a>
+            <a href="https://github.com/DAVIAN-Robotics/FlashRL" class="nav-button" target="_blank" rel="noopener noreferrer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                </svg>
+                Code
+            </a>
+        </nav>
+
+        <!-- Demo Video Section -->
+        <section id="demo-video" style="margin-bottom: 60px;">
+            <div class="demo-video-container">
+                <video controls autoplay loop muted playsinline>
+                    <source src="videos/demo.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        </section>
+
+    </div><!-- end .container -->
+    <div class="container container--wide">
+        <!-- TL;DR Section -->
+        <section id="tldr">
+            <h2>TL;DR</h2>
+            <p style="font-size: 1.4rem; text-align: center;">If you're using PPO, try <strong style="color: #40BF52;">FlashSAC</strong>!</p>
+        </section>
+
+        <!-- Video Gallery Section -->
+        <section id="videos">
+            <h2>Video Results</h2>
+
+            <!-- State-based, Low DoF -->
+            <div class="video-category">
+                <h3 id="low-dof-title">Low DoF</h3>
+                <div class="video-curve-layout">
+                <div class="video-carousel-panel">
+                <div class="video-slider-container">
+                    <button class="slider-btn prev" onclick="slideVideos('low-dof', -1)">‹</button>
+                    <div class="video-slider-wrapper">
+                        <div class="video-slider" id="low-dof-slider">
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/isaaclab/Isaac-Velocity-Flat-Anymal-C-v0.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Anymal-C Flat<br><span class="caption-sim">IsaacLab</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/isaaclab/Isaac-Velocity-Flat-Anymal-D-v0.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Anymal-D Flat<br><span class="caption-sim">IsaacLab</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/genesis/go2-walk.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Go2 Walk<br><span class="caption-sim">Genesis</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/genesis/go2-walk_easy.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Go2 Walk Easy<br><span class="caption-sim">Genesis</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/genesis/panda-grasp.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Panda Grasp<br><span class="caption-sim">Genesis</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/isaaclab/Isaac-Open-Drawer-Franka-v0.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Franka Open Drawer<br><span class="caption-sim">IsaacLab</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/isaaclab/Isaac-Lift-Cube-Franka-v0.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Franka Lift Cube<br><span class="caption-sim">IsaacLab</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/maniskill/LiftPegUpright.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Panda LiftPegUpright<br><span class="caption-sim">ManiSkill</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/maniskill/PegInsertionSide.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Panda PegInsertionSide<br><span class="caption-sim">ManiSkill</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/maniskill/PickSingleYCB.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Panda PickSingleYCB<br><span class="caption-sim">ManiSkill</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/maniskill/PokeCube.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Panda PokeCube<br><span class="caption-sim">ManiSkill</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/maniskill/PullCube.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Panda PullCube<br><span class="caption-sim">ManiSkill</span></div>
+                        </div>
+                    </div>
+                    </div>
+                    <button class="slider-btn next" onclick="slideVideos('low-dof', 1)">›</button>
+                    <!-- <div class="slider-indicators" id="low-dof-indicators"></div> -->
+                </div>
+                </div><!-- end video-carousel-panel -->
+                <div class="learning-curve-panel">
+                    <img class="learning-curve-img" src="images/state-based-low-dof.png" alt="State-based Low DoF Learning Curve">
+                </div>
+                </div><!-- end video-curve-layout -->
+            </div>
+
+            <!-- State-based, High DoF -->
+            <div class="video-category">
+                <h3 id="high-dof-title">High DoF</h3>
+                <div class="video-curve-layout">
+                <div class="video-carousel-panel">
+                <div class="video-slider-container">
+                    <button class="slider-btn prev" onclick="slideVideos('high-dof', -1)">‹</button>
+                    <div class="video-slider-wrapper">
+                        <div class="video-slider" id="high-dof-slider">
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/isaaclab/Isaac-Repose-Cube-Shadow-Direct-v0.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Shadow Repose Cube<br><span class="caption-sim">IsaacLab</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/isaaclab/Isaac-Repose-Cube-Allegro-Direct-v0.mp4" type="video/mp4"></video>
+                            <div class="video-caption">Allegro Repose Cube<br><span class="caption-sim">IsaacLab</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/isaaclab/Isaac-Velocity-Flat-G1-v0.mp4" type="video/mp4"></video>
+                            <div class="video-caption">G1 Flat<br><span class="caption-sim">IsaacLab</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/isaaclab/Isaac-Velocity-Rough-G1-v0.mp4" type="video/mp4"></video>
+                            <div class="video-caption">G1 Rough<br><span class="caption-sim">IsaacLab</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/isaaclab/Isaac-Velocity-Flat-H1-v0.mp4" type="video/mp4"></video>
+                            <div class="video-caption">H1 Flat<br><span class="caption-sim">IsaacLab</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/isaaclab/Isaac-Velocity-Rough-H1-v0.mp4" type="video/mp4"></video>
+                            <div class="video-caption">H1 Rough<br><span class="caption-sim">IsaacLab</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/mujoco-playground/G1JoystickRoughTerrain.mp4" type="video/mp4"></video>
+                            <div class="video-caption">G1 Joystick Rough<br><span class="caption-sim">MuJoCo Playground</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/mujoco-playground/G1JoystickFlatTerrain.mp4" type="video/mp4"></video>
+                            <div class="video-caption">G1 Joystick Flat<br><span class="caption-sim">MuJoCo Playground</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/mujoco-playground/T1JoystickRoughTerrain.mp4" type="video/mp4"></video>
+                            <div class="video-caption">T1 Joystick Rough<br><span class="caption-sim">MuJoCo Playground</span></div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/mujoco-playground/T1JoystickFlatTerrain.mp4" type="video/mp4"></video>
+                            <div class="video-caption">T1 Joystick Flat<br><span class="caption-sim">MuJoCo Playground</span></div>
+                        </div>
+                    </div>
+                    </div>
+                    <button class="slider-btn next" onclick="slideVideos('high-dof', 1)">›</button>
+                    <!-- <div class="slider-indicators" id="high-dof-indicators"></div> -->
+                </div>
+                </div><!-- end video-carousel-panel -->
+                <div class="learning-curve-panel">
+                    <img class="learning-curve-img" src="images/state-based-high-dof.png" alt="State-based High DoF Learning Curve">
+                </div>
+                </div><!-- end video-curve-layout -->
+            </div>
+            <!-- Sim-to-Real (Flat) -->
+            <div class="video-category">
+                <h3 id="sim-to-real-title">Sim-to-Real (Flat)</h3>
+                <div class="video-curve-layout sim-to-real-curve-layout">
+                <div class="video-carousel-panel">
+                <div class="video-slider-container">
+                    <button class="slider-btn prev" onclick="slideVideos('sim-to-real', -1)">‹</button>
+                    <div class="video-slider-wrapper">
+                        <div class="video-slider" id="sim-to-real-slider">
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/sim-to-real/g1_walking.mp4" type="video/mp4"></video>
+                            <div class="video-caption">G1 Walking</div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/sim-to-real/g1_turning.mp4" type="video/mp4"></video>
+                            <div class="video-caption">G1 Turning</div>
+                        </div>
+                        <div class="video-wrapper">
+                            <video autoplay loop muted playsinline><source src="videos/sim-to-real/g1_push.mp4" type="video/mp4"></video>
+                            <div class="video-caption">G1 Push Perturbation</div>
+                        </div>
+                        </div>
+                    </div>
+                    <button class="slider-btn next" onclick="slideVideos('sim-to-real', 1)">›</button>
+                    <!-- <div class="slider-indicators" id="sim-to-real-indicators"></div> -->
+                </div>
+                </div><!-- end video-carousel-panel -->
+                <div class="learning-curve-panel">
+                    <img class="learning-curve-img" src="images/sim-to-real-flat.png" alt="Sim-to-Real (Flat)">
+                </div>
+                </div><!-- end video-curve-layout -->
+            </div>
+
+            <!-- Sim-to-Real (Rough) -->
+            <div class="video-category">
+                <h3 id="sim-to-real-rough-title">Sim-to-Real (Rough)</h3>
+                <div class="video-curve-layout stair-curve-layout">
+                <div class="video-carousel-panel sim-to-real-stair-panel">
+                    <video autoplay loop muted playsinline><source src="videos/sim-to-real/g1_stair.mp4" type="video/mp4"></video>
+                </div>
+                <div class="learning-curve-panel">
+                    <img class="learning-curve-img" src="images/sim-to-real-rough.png" alt="Sim-to-Real (Rough)">
+                </div>
+                </div><!-- end video-curve-layout -->
+                <div class="stair-caption-row">
+                    <div class="video-caption">G1 Stair</div>
+                    <div></div>
+                </div>
+            </div>
+        </section>
+    </div><!-- end .container--wide -->
+    <div class="container">
+
+        <!-- Motivation Section -->
+        <section id="motivation">
+            <h2>Motivation</h2>
+            <p>
+                Scaling RL to high-dimensional robots remains challenging:
+            </p>
+            <ul>
+                <li><strong>On-policy methods (PPO)</strong> are reliable but require massive amounts of simulation because they discard past data after each update.</li>
+                <li><strong>Off-policy methods (SAC, TD3)</strong> can reuse experience and are more sample-efficient, but they often become unstable in high-dimensional control.</li>
+            </ul>
+
+            <p style="margin-top: 20px;">
+                The instability of off-policy methods primarily stems from <strong>critic training</strong>. Critics are trained by minimizing a bootstrapped Bellman error:
+            </p>
+
+            <div class="equation-box">
+                <p style="text-align: center; font-size: 1.1rem; margin: 0;">
+                    $$\mathcal{L}_Q = \mathbb{E}_{(s,a,r,s') \sim \mathcal{B}} \left[ \left( Q_\theta(s, a) - (r + \gamma Q_{\bar{\theta}}(s', a')) \right)^2 \right]$$
+                </p>
+            </div>
+
+            <p style="margin-top: 20px;">
+                In high-dimensional settings, target values at next state-action pairs \((s', a')\) are often poorly covered by the replay buffer, and since targets depend on the critic's own predictions, small errors compound through repeated bootstrapping. <span class="flashsac">FlashSAC</span> addresses this by scaling data diversity, constraining update dynamics, and scaling model size once stability is ensured.
+            </p>
+        </section>
+
+        <!-- Algorithm Section -->
+        <section id="algorithm">
+            <h2>Algorithm</h2>
+
+            <h3 style="font-size: 1.4rem; margin-top: 10px; margin-bottom: 15px; color: #40BF52;">1. Scaling Data Volume and Diversity</h3>
+            <ul style="margin-left: 20px; margin-top: 15px;">
+                <li><strong>Massively Parallel Simulation (1024 Environments):</strong> Rapid accumulation of diverse trajectories, maintaining adequate coverage across high-dimensional state-action spaces.</li>
+                <li><strong>Large-Capacity Replay Buffer (10M Transitions):</strong> Preserves long-tail experiences with 10× larger capacity than standard buffers.</li>
+                <li><strong>Unified Entropy Target (Task-Agnostic):</strong> Fixed action standard deviation target ensures consistent exploration across different robot embodiments.</li>
+                <li><strong>Noise Repetition (Zeta Distribution):</strong> Repeats sampled noise for \( k \) consecutive steps, inducing temporal correlation without per-environment state — a lightweight alternative to pink noise.</li>
+            </ul>
+
+            <h3 style="font-size: 1.4rem; margin-top: 40px; margin-bottom: 15px; color: #40BF52;">2. Constraining Update Dynamics</h3>
+            <p>
+                Explicitly bounds weight, feature, and gradient norms to prevent error amplification under bootstrapped critic updates:
+            </p>
+
+            <div class="algo-box">
+                <h4 style="font-size: 1.1rem; margin-bottom: 10px;">Architecture Design</h4>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Inverted Residual Blocks:</strong> Inspired by Transformers, expands features to higher dimensions then projects back with residual connections</li>
+                    <li><strong>Pre-activation Normalization:</strong> Applies batch normalization before nonlinearities to handle non-stationary replay data</li>
+                    <li><strong>Post-RMS Normalization:</strong> Bounds per-sample feature norms to prevent rare inputs from destabilizing bootstrapping</li>
+                </ul>
+            </div>
+
+            <div style="text-align: center; margin: 25px 0;">
+                <img src="images/architecture.png" alt="FlashSAC Architecture" class="architecture-img">
+            </div>
+
+            <div class="algo-box">
+                <h4 style="font-size: 1.1rem; margin-bottom: 10px;">Training Techniques</h4>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Cross-Batch Value Prediction:</strong> Concatenates current and next transitions into a single batch for consistent normalization statistics</li>
+                    <li><strong>Distributional Critic:</strong> Represents Q-values as categorical distributions over atoms, smoothing the optimization landscape</li>
+                    <li><strong>Adaptive Reward Scaling:</strong> Normalizes rewards to keep returns within fixed support while preserving optimal policy</li>
+                    <li><strong>Weight Normalization:</strong> Projects weight vectors onto unit-norm sphere after each update to prevent uncontrolled weight growth</li>
+                </ul>
+            </div>
+
+            <div style="text-align: center; margin: 25px 0;">
+                <img src="images/component_ablation.png" alt="Component Ablation Study" style="max-width: 100%; height: auto;">
+            </div>
+
+            <h3 style="font-size: 1.4rem; margin-top: 40px; margin-bottom: 15px; color: #40BF52;">3. Scaling Model for Faster Training</h3>
+            <p>
+                With stable off-policy learning, scaling laws from supervised learning apply: larger models trained with larger batches and fewer updates converge faster. <span class="flashsac">FlashSAC</span> uses a 2.5M-parameter, 6-layer network with batch size 2048 and a UTD ratio of 2/1024.
+            </p>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <img src="images/hyperparameter_ablation.png" alt="Hyperparameter Ablation Study" style="max-width: 100%; height: auto;">
+            </div>
+        </section>
+
+        <!-- Citation Section -->
+        <section id="citation">
+            <h2>Citation</h2>
+            <div class="code-block">
+                <pre><code>@article{kim2026flashsac,
+  title={FlashSAC: Fast and Stable Off-Policy Reinforcement Learning for High-Dimensional Robot Control},
+  author={Kim, Donghu and Lee, Youngdo and Park, Minho and Kim, Kinam and Seno, Takuma and
+          Nahrendra, I Made Aswin and Min, Sehee and Palenicek, Daniel and Vogt, Florian and
+          Kragic, Danica and Peters, Jan and Choo, Jaegul and Lee, Hojoon},
+  journal={arXiv preprint arXiv:2602},
+  year={2026}
+}</code></pre>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>&copy; 2026 PlaceHolder. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- Video Modal Overlay -->
+    <div class="video-modal-overlay" id="videoModal">
+        <div class="video-modal">
+            <video id="videoModalPlayer" controls autoplay loop></video>
+            <button class="video-modal-close" id="videoModalClose">&times;</button>
+        </div>
+    </div>
+
+    <script>
+        // Infinite carousel slider functionality
+        const sliderStates = {
+            'sim-to-real': { currentIndex: 0, focusedVideo: 0, totalVideos: 0, clonesToAdd: 0, isTransitioning: false },
+            'low-dof':     { currentIndex: 0, focusedVideo: 0, totalVideos: 0, clonesToAdd: 0, isTransitioning: false },
+            'high-dof':    { currentIndex: 0, focusedVideo: 0, totalVideos: 0, clonesToAdd: 0, isTransitioning: false },
+        };
+
+        function getVisibleVideos() {
+            if (window.innerWidth <= 480) return 1;
+            if (window.innerWidth <= 768) return 2;
+            return 3;
+        }
+
+        // Initialize infinite carousel slider
+        function initSlider(category) {
+            const slider = document.getElementById(category + '-slider');
+
+            // Remove existing clones if any
+            slider.querySelectorAll('.clone').forEach(clone => clone.remove());
+
+            const originalVideos = Array.from(slider.children);
+            const totalVideos = originalVideos.length;
+            const visibleVideos = getVisibleVideos();
+
+            // Update title with task count
+            const taskCounts = { 'low-dof': 15, 'high-dof': 10 };
+            const title = document.getElementById(category + '-title');
+            const baseName = title.textContent.trim().replace(/\s*\(\d+\s+tasks\)/, '');
+            if (taskCounts[category] !== undefined) {
+                title.textContent = `${baseName} (${taskCounts[category]} tasks)`;
+            }
+
+            // Get slider buttons
+            const sliderContainer = slider.parentElement.parentElement;
+            const prevBtn = sliderContainer.querySelector('.slider-btn.prev');
+            const nextBtn = sliderContainer.querySelector('.slider-btn.next');
+            const indicatorsContainer = document.getElementById(category + '-indicators');
+
+            if (!prevBtn || !nextBtn) return;
+
+            // If all videos fit on screen, hide controls and reset position
+            if (totalVideos <= visibleVideos) {
+                prevBtn.style.display = 'none';
+                nextBtn.style.display = 'none';
+                if (indicatorsContainer) indicatorsContainer.style.display = 'none';
+                slider.style.transition = 'none';
+                slider.style.transform = 'translateX(0)';
+                sliderStates[category].totalVideos = totalVideos;
+                sliderStates[category].clonesToAdd = 0;
+                sliderStates[category].currentIndex = 0;
+                updateSliderPlayback(category);
+                return;
+            }
+
+            // Show controls
+            prevBtn.style.display = 'flex';
+            nextBtn.style.display = 'flex';
+            if (indicatorsContainer) indicatorsContainer.style.display = 'flex';
+
+            // Create clones for infinite scroll
+            // Clone enough videos to fill the visible area
+            const clonesToAdd = Math.min(visibleVideos, totalVideos);
+
+            // Add clones at the end (first N videos)
+            for (let i = 0; i < clonesToAdd; i++) {
+                const clone = originalVideos[i].cloneNode(true);
+                clone.classList.add('clone');
+                clone.setAttribute('data-original-index', i);
+                slider.appendChild(clone);
+            }
+
+            // Add clones at the beginning (last N videos)
+            for (let i = totalVideos - 1; i >= totalVideos - clonesToAdd; i--) {
+                const clone = originalVideos[i].cloneNode(true);
+                clone.classList.add('clone');
+                clone.setAttribute('data-original-index', i);
+                slider.insertBefore(clone, slider.firstChild);
+            }
+
+            // Set src directly on clone videos for reliable preloading
+            slider.querySelectorAll('.clone video').forEach(video => {
+                const source = video.querySelector('source');
+                if (source) video.src = source.src;
+                video.preload = 'auto';
+            });
+
+            // Create indicators
+            createIndicators(category, totalVideos);
+
+            // Reset position - start at the first real video (after leading clones)
+            sliderStates[category].currentIndex = clonesToAdd;
+            sliderStates[category].focusedVideo = 0;
+            sliderStates[category].totalVideos = totalVideos;
+            sliderStates[category].clonesToAdd = clonesToAdd;
+            sliderStates[category].isTransitioning = false;
+
+            updateSliderPosition(category, false);
+            updateButtons(category);
+            updateSliderPlayback(category);
+        }
+
+        function updateSliderPosition(category, animate = true) {
+            const slider = document.getElementById(category + '-slider');
+            const wrappers = slider.querySelectorAll('.video-wrapper');
+            if (wrappers.length === 0) return;
+
+            const computedStyle = window.getComputedStyle(slider);
+            const parsedGap = parseFloat(computedStyle.gap);
+            const gap = isNaN(parsedGap) ? 15 : parsedGap;
+            const wrapperWidth = wrappers[0].getBoundingClientRect().width;
+            const translateX = -sliderStates[category].currentIndex * (wrapperWidth + gap);
+
+            slider.style.transition = animate ? 'transform 0.4s ease' : 'none';
+            slider.style.transform = `translateX(${translateX}px)`;
+        }
+
+        function updateButtons(category) {
+            const sliderContainer = document.getElementById(category + '-slider').parentElement.parentElement;
+            const prevBtn = sliderContainer.querySelector('.slider-btn.prev');
+            const nextBtn = sliderContainer.querySelector('.slider-btn.next');
+
+            // Always enable buttons for circular navigation
+            if (prevBtn) prevBtn.disabled = false;
+            if (nextBtn) nextBtn.disabled = false;
+        }
+
+        function createIndicators(category, count) {
+            const indicatorsContainer = document.getElementById(category + '-indicators');
+            if (!indicatorsContainer) return;
+            indicatorsContainer.innerHTML = '';
+
+            // Create indicator for each video
+            for (let i = 0; i < count; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'indicator-dot';
+                if (i === 0) dot.classList.add('active');
+                dot.addEventListener('click', () => {
+                    goToSlide(category, i);
+                });
+                indicatorsContainer.appendChild(dot);
+            }
+        }
+
+        function updateIndicators(category) {
+            const dots = document.querySelectorAll(`#${category}-indicators .indicator-dot`);
+            const focusedVideo = sliderStates[category].focusedVideo;
+
+            dots.forEach((dot, index) => {
+                // Highlight the focused video
+                dot.classList.toggle('active', index === focusedVideo);
+            });
+        }
+
+        function goToSlide(category, videoIndex) {
+            const state = sliderStates[category];
+
+            // Prevent multiple clicks during transition
+            if (state.isTransitioning) return;
+
+            const slider = document.getElementById(category + '-slider');
+            const clonesToAdd = state.clonesToAdd;
+            const visibleCount = getVisibleVideos();
+
+            // Focus on the clicked video
+            state.focusedVideo = videoIndex;
+
+            // Cap position so trailing clones are never in the resting visible area
+            const maxIndex = clonesToAdd + state.totalVideos - visibleCount;
+            const newIndex = Math.min(clonesToAdd + videoIndex, maxIndex);
+            const positionChanged = newIndex !== state.currentIndex;
+            state.currentIndex = newIndex;
+
+            updateIndicators(category);
+            updateButtons(category);
+
+            if (positionChanged) {
+                state.isTransitioning = true;
+                updateSliderPosition(category, true);
+
+                const handleTransitionEnd = () => {
+                    state.isTransitioning = false;
+                    updateSliderPlayback(category);
+                    slider.removeEventListener('transitionend', handleTransitionEnd);
+                };
+                slider.addEventListener('transitionend', handleTransitionEnd);
+            } else {
+                updateSliderPlayback(category);
+            }
+        }
+
+        function slideVideos(category, direction) {
+            const slider = document.getElementById(category + '-slider');
+            const state = sliderStates[category];
+
+            // Prevent sliding when all videos fit on screen
+            if (state.clonesToAdd === 0) return;
+
+            // Prevent multiple clicks during transition
+            if (state.isTransitioning) return;
+
+            const totalVideos = state.totalVideos;
+            const clonesToAdd = state.clonesToAdd;
+
+            // Set transitioning flag
+            state.isTransitioning = true;
+
+            // Move to next/prev position
+            state.currentIndex += direction;
+
+            // Calculate which real video we're focused on
+            let realVideoIndex = state.currentIndex - clonesToAdd;
+
+            // Update focused video (with wrapping)
+            if (realVideoIndex < 0) {
+                realVideoIndex = totalVideos + realVideoIndex;
+            } else if (realVideoIndex >= totalVideos) {
+                realVideoIndex = realVideoIndex - totalVideos;
+            }
+            state.focusedVideo = realVideoIndex;
+
+            // Animate to new position
+            updateSliderPosition(category, true);
+            updateIndicators(category);
+            updateButtons(category);
+
+            // Use transitionend event instead of setTimeout
+            const handleTransitionEnd = () => {
+                // If we're in the leading clones area (before first real video)
+                if (state.currentIndex < clonesToAdd) {
+                    state.currentIndex = state.currentIndex + totalVideos;
+                    updateSliderPosition(category, false);
+                }
+                // If we're in the trailing clones area (after last real video)
+                else if (state.currentIndex >= clonesToAdd + totalVideos) {
+                    state.currentIndex = state.currentIndex - totalVideos;
+                    updateSliderPosition(category, false);
+                }
+
+                // Reset transitioning flag
+                state.isTransitioning = false;
+                updateSliderPlayback(category);
+
+                // Remove event listener
+                slider.removeEventListener('transitionend', handleTransitionEnd);
+            };
+
+            slider.addEventListener('transitionend', handleTransitionEnd);
+        }
+
+        // Play only the visible videos in a slider, pause everything else
+        function updateSliderPlayback(category) {
+            const slider = document.getElementById(category + '-slider');
+            if (!slider) return;
+            const state = sliderStates[category];
+            if (!state.totalVideos) return;
+
+            const visibleCount = getVisibleVideos();
+            const wrappers = slider.querySelectorAll('.video-wrapper');
+
+            wrappers.forEach((wrapper, i) => {
+                const video = wrapper.querySelector('video');
+                if (!video) return;
+                const isVisible = i >= state.currentIndex && i < state.currentIndex + visibleCount;
+                if (isVisible) {
+                    if (video.readyState >= 2) {
+                        video.play().catch(() => {});
+                    } else {
+                        video.preload = 'auto';
+                        video.load();
+                        video.addEventListener('canplay', () => {
+                            video.play().catch(() => {});
+                        }, { once: true });
+                    }
+                } else {
+                    video.pause();
+                }
+            });
+        }
+
+        // Lazy load + auto play/pause videos based on visibility
+        function setupVideoLazyLoading() {
+            // Non-slider videos (sim-to-real grid): individual observer
+            const videoObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const video = entry.target;
+                    if (entry.isIntersecting) {
+                        if (video.readyState === 0) video.load();
+                        video.play().catch(() => {});
+                    } else {
+                        video.pause();
+                    }
+                });
+            }, { rootMargin: '200px 0px' });
+
+
+            // Slider videos (originals): disable autoplay, managed by updateSliderPlayback
+            document.querySelectorAll('.video-slider .video-wrapper:not(.clone) video').forEach(video => {
+                video.preload = 'none';
+                video.removeAttribute('autoplay');
+            });
+
+            // Clone videos: preload so infinite scroll has no black frames
+            document.querySelectorAll('.video-slider .clone video').forEach(video => {
+                video.removeAttribute('autoplay');
+                video.preload = 'auto';
+                video.load();
+            });
+
+            // Observe slider sections — pause all when section leaves viewport
+            const sectionObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const slider = entry.target.querySelector('.video-slider');
+                    if (entry.isIntersecting) {
+                        if (slider) {
+                            const category = slider.id.replace('-slider', '');
+                            updateSliderPlayback(category);
+                        } else {
+                            entry.target.querySelectorAll('video').forEach(v => v.play().catch(() => {}));
+                        }
+                    } else {
+                        entry.target.querySelectorAll('video').forEach(v => v.pause());
+                    }
+                });
+            }, { rootMargin: '200px 0px' });
+
+            document.querySelectorAll('.video-category').forEach(section => {
+                sectionObserver.observe(section);
+            });
+        }
+
+        function centerSliderButtons() {
+            document.querySelectorAll('.video-slider-container').forEach(container => {
+                const vid = container.querySelector('video');
+                if (!vid) return;
+                const h = vid.offsetHeight;
+                if (!h) return;
+                container.querySelectorAll('.slider-btn').forEach(btn => {
+                    btn.style.top = (h / 2) + 'px';
+                });
+            });
+        }
+
+        // Initialize all sliders on load
+        document.addEventListener('DOMContentLoaded', function() {
+            Object.keys(sliderStates).forEach(category => {
+                initSlider(category);
+            });
+            setupVideoLazyLoading();
+            centerSliderButtons();
+        });
+
+        // Reinitialize sliders on window resize
+        let resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                Object.keys(sliderStates).forEach(category => {
+                    initSlider(category);
+                });
+                centerSliderButtons();
+            }, 250);
+        });
+
+        // Trackpad swipe / touch swipe to slide
+        function setupSwipeSliders() {
+            document.querySelectorAll('.video-slider-wrapper').forEach(wrapper => {
+                const slider = wrapper.querySelector('.video-slider');
+                if (!slider) return;
+
+                const category = slider.id.replace('-slider', '');
+                let accumulated = 0;
+                let scrollTimer = null;
+                const threshold = 80;
+
+                // Trackpad two-finger swipe (wheel event)
+                wrapper.addEventListener('wheel', (e) => {
+                    const state = sliderStates[category];
+                    if (!state || !state.totalVideos) return;
+                    if (state.clonesToAdd === 0) return;
+                    if (state.isTransitioning) return;
+
+                    // Use deltaX for horizontal swipe, fall back to deltaY
+                    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+                    if (delta === 0) return;
+
+                    e.preventDefault();
+                    accumulated += delta;
+
+                    if (accumulated > threshold) {
+                        slideVideos(category, 1);
+                        accumulated = 0;
+                    } else if (accumulated < -threshold) {
+                        slideVideos(category, -1);
+                        accumulated = 0;
+                    }
+
+                    // Reset accumulator after pause
+                    clearTimeout(scrollTimer);
+                    scrollTimer = setTimeout(() => { accumulated = 0; }, 200);
+                }, { passive: false });
+
+                // Touch swipe for mobile
+                let touchStartX = 0;
+                let touchDragDistance = 0;
+                let currentTranslateX = 0;
+
+                function getTranslateX() {
+                    const style = window.getComputedStyle(slider);
+                    const matrix = new DOMMatrix(style.transform);
+                    return matrix.m41;
+                }
+
+                wrapper.addEventListener('touchstart', (e) => {
+                    if (sliderStates[category]?.clonesToAdd === 0) return;
+                    if (sliderStates[category]?.isTransitioning) return;
+                    touchStartX = e.touches[0].pageX;
+                    currentTranslateX = getTranslateX();
+                    slider.style.transition = 'none';
+                    touchDragDistance = 0;
+                }, { passive: true });
+
+                wrapper.addEventListener('touchmove', (e) => {
+                    const x = e.touches[0].pageX;
+                    touchDragDistance = x - touchStartX;
+                    slider.style.transform = `translateX(${currentTranslateX + touchDragDistance}px)`;
+                }, { passive: true });
+
+                wrapper.addEventListener('touchend', () => {
+                    const swipeThreshold = 50;
+                    if (touchDragDistance < -swipeThreshold) {
+                        slideVideos(category, 1);
+                    } else if (touchDragDistance > swipeThreshold) {
+                        slideVideos(category, -1);
+                    } else {
+                        updateSliderPosition(category, true);
+                    }
+                });
+            });
+        }
+
+        // Initialize swipe after sliders are ready
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(setupSwipeSliders, 100);
+        });
+
+        // Video modal functionality
+        (function () {
+            const overlay = document.getElementById('videoModal');
+            const player = document.getElementById('videoModalPlayer');
+            const closeBtn = document.getElementById('videoModalClose');
+
+            // Click any gallery video to open in modal
+            document.querySelectorAll('.video-slider video, .sim-to-real-stair-panel video').forEach(vid => {
+                vid.addEventListener('click', e => {
+                    e.preventDefault();
+                    const src = vid.querySelector('source')?.src || vid.src;
+                    player.src = src;
+                    player.currentTime = vid.currentTime;
+                    overlay.classList.add('active');
+                });
+            });
+
+            function closeModal() {
+                overlay.classList.remove('active');
+                player.pause();
+                player.removeAttribute('src');
+                player.load();
+            }
+
+            closeBtn.addEventListener('click', closeModal);
+            overlay.addEventListener('click', e => {
+                if (e.target === overlay) closeModal();
+            });
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') closeModal();
+            });
+        })();
+    </script>
+</body>
+</html>

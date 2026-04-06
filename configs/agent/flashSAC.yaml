@@ -1,0 +1,56 @@
+##################################################################################
+# FlashSAC
+##################################################################################
+
+agent_type: 'flashSAC'
+
+seed: ${seed}
+device_type: 'cuda'
+
+buffer_max_length: 1_000_000
+buffer_min_length: 10_000
+buffer_device_type: 'cuda'
+sample_batch_size: 2048
+
+normalize_reward: true
+normalized_G_max: 5.0
+
+asymmetric_observation: false
+
+learning_rate_init: 3e-4
+learning_rate_peak: 3e-4
+learning_rate_end: 1.5e-4
+learning_rate_warmup_rate: 1e-6
+learning_rate_warmup_step: ${eval:'int(${agent.learning_rate_warmup_rate} *
+  ${num_interaction_steps} * ${updates_per_interaction_step})'}
+learning_rate_decay_rate: 1.0
+learning_rate_decay_step: ${eval:'int(${agent.learning_rate_decay_rate} *
+  ${num_interaction_steps} * ${updates_per_interaction_step})'}
+
+actor_num_blocks: 2
+actor_hidden_dim: 128
+actor_bc_alpha: 0.0
+actor_noise_zeta_mu: 2.0
+actor_noise_zeta_max: 16
+actor_update_period: 2
+
+critic_num_blocks: 2
+critic_hidden_dim: 256
+critic_num_bins: 101
+critic_min_v: ${eval:'-${agent.normalized_G_max}'}
+critic_max_v: ${eval:'${agent.normalized_G_max}'}
+critic_target_update_tau: 0.01
+
+temp_initial_value: 0.01
+temp_target_sigma: 0.15
+temp_target_entropy: null
+
+gamma: ${gamma}
+n_step: ${n_step}
+
+use_compile: true
+compile_mode: 'auto'     # 'max-autotune' if torch>=2.9.0 else 'reduce-overhead'
+use_amp: true
+
+load_optimizer: true
+load_reward_normalizer: true

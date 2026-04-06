@@ -1,0 +1,170 @@
+[project]
+name = "FlashRL"
+version = "0.1.0"
+description = "Official repository for FlashRL"
+readme = "README.md"
+# Allow both Python 3.10 (Ubuntu 22.04) and 3.11 (Ubuntu 24.04)
+requires-python = ">=3.10, <3.12"
+dependencies = [
+    "hydra-core",
+    "omegaconf",
+    "termcolor",
+    "tqdm",
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "imageio",
+    "moviepy",
+    "wandb==0.23",
+    "tensorboard",
+    "optax==0.2.5",
+    "rliable==1.2.0",
+    "flax==0.10.1",
+    "ml-dtypes==0.5.0",
+    "patchelf",
+    "ipykernel>=6.29.5",
+    "Shimmy>=2.0.0",
+    "gymnasium>=1.1.1",
+    "gym>=0.26.0",
+    "Cython==0.29.37",
+    "pymeshlab==2023.12.post3",
+    "dm-control>=1.0.20",
+    "setuptools<=65",
+
+    # [Config 1: Ubuntu 22.04 / RTX3090,4090 / Python 3.10]
+    "torch>=2.5.1 ; python_version == '3.10'",
+    "jax[cuda12]==0.4.30 ; python_version == '3.10'",
+    "jaxlib==0.4.30 ; python_version == '3.10'",
+    "distrax==0.1.5; python_version == '3.10'",
+    "tensorflow-probability==0.24.0; python_version == '3.10'",
+
+    # [Config 2: Ubuntu 24.04 / Blackwell(RTX50x0,Bx00) / Python 3.11]
+    "torch==2.9.1 ; python_version == '3.11'",
+    "jax[cuda12]==0.7.1 ; python_version == '3.11'",
+    "jaxlib==0.7.1 ; python_version == '3.11'",
+    "distrax==0.1.7; python_version == '3.11'",
+    "orbax-checkpoint==0.11.30; python_version == '3.11'",
+]
+
+[project.optional-dependencies]
+isaaclab = [
+    "torch==2.5.1 ; python_version == '3.10'",
+    "isaacsim[all,extscache]==4.5.0 ; python_version == '3.10'",
+    "isaaclab[isaacsim]==2.1.0 ; python_version == '3.10'",
+    "torch==2.9.1 ; python_version == '3.11'",
+    "isaacsim[all,extscache]==5.1.0 ; python_version == '3.11'",
+    "isaaclab[isaacsim]==2.3.0 ; python_version == '3.11'",
+]
+mujoco-playground = [
+    "playground==0.0.5",
+    "mujoco==3.3.3",
+    "mujoco-mjx==3.3.3",
+]
+maniskill = ["mani-skill"]
+genesis = ["genesis-world"]
+humanoid-bench = ["humanoid-bench"]
+myosuite = ["myosuite"]
+metaworld = ["metaworld"]
+d4rl = [
+    "d4rl",
+    "mujoco-py>=2.1.2.14", # Old mujoco often needed for D4RL
+]
+
+# Full installation (excluding isaaclab due to conflict)
+all = [
+    "playground==0.0.5",
+    "mujoco==3.3.3",
+    "mujoco-mjx==3.3.3",
+    "mani-skill",
+    "humanoid-bench",
+    "myosuite",
+    "metaworld",
+    "genesis-world",
+    "d4rl",
+    "mujoco-py>=2.1.2.14",
+]
+
+[tool.uv]
+conflicts = [
+    [{ extra = "isaaclab" }, { extra = "genesis" }],
+    [{ extra = "isaaclab" }, { extra = "humanoid-bench" }],
+    [{ extra = "isaaclab" }, { extra = "all" }],
+]
+override-dependencies = [
+    "pywin32==306 ; sys_platform == 'win32'",
+    "nvidia-cudnn-cu12>=9.1.0 ; python_version == '3.10'",
+    "nvidia-cudnn-cu12>=9.8.0 ; python_version == '3.11'", # required for jaxlib==0.7.1
+    "torch==2.5.1 ; python_version == '3.10'",
+    "torch==2.9.1 ; python_version == '3.11'", # https://github.com/isaac-sim/IsaacLab/issues/4371 (required for Blackwell GPUs)
+    "torchvision==0.20.1 ; python_version == '3.10'",
+    "torchvision==0.24.1 ; python_version == '3.11'", # https://github.com/isaac-sim/IsaacLab/issues/4371
+    "flatdict ; python_version == '3.10'",
+    "flatdict==4.0.0 ; python_version == '3.11'", # https://github.com/isaac-sim/IsaacLab/issues/4577
+]
+
+[tool.uv.sources]
+# environment sources
+humanoid-bench = { git = "https://github.com/DAVIAN-Robotics/humanoid-bench" }
+myosuite = { git = "https://github.com/DAVIAN-Robotics/myosuite" }
+mani-skill = { git = "https://github.com/haosulab/ManiSkill.git", rev = "aad75f23da42c0cf30e220bde896d62eb7581e97" }
+metaworld = { git = "https://github.com/Farama-Foundation/Metaworld.git", rev = "04be337a12305e393c0caf0cbf5ec7755c7c8feb" }
+d4rl = { git = "https://github.com/takuseno/D4RL.git" }
+isaacsim = { index = "nvidia" }
+isaaclab = { index = "nvidia" }
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "mypy>=1.16.1",
+    "ruff>=0.12.1",
+    "ipdb",
+]
+
+[tool.ruff]
+exclude = [".git", ".mypy_cache", ".ruff_cache", ".venv"]
+line-length = 120
+indent-width = 4
+target-version = "py310"
+unsafe-fixes = true
+
+[tool.ruff.lint]
+select = ["E4", "E5", "E7", "E9", "F", "UP006", "I", "W"]
+ignore = ["F403"]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+[tool.mypy]
+strict = true
+strict_optional = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "flash_rl.envs.genesis_envs.*"
+ignore_errors = true
