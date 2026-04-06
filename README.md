@@ -1,7 +1,7 @@
 # FlashSAC: Fast and Stable Off-Policy Reinforcement Learning for High-Dimensional Robot Control
 
 [![Project Page](https://img.shields.io/badge/Project_Page-Visit-blue.svg)](https://holiday-robot.github.io/FlashSAC/)
-[![PDF](https://img.shields.io/badge/PDF-arXiv-b31b1b.svg)](docs/pdf/_RSS_26__FlashSAC.pdf)
+[![PDF](https://img.shields.io/badge/PDF-arXiv-b31b1b.svg)](docs/pdf/arXiv26_flashsac)
 
 > [Donghu Kim](https://i-am-proto.github.io/)\*<sup>1</sup>, [Youngdo Lee](https://leeyngdo.github.io/)\*<sup>2,3</sup>, [Minho Park](https://pmh9960.github.io/)<sup>2</sup>, [Kinam Kim](https://kinam0252.github.io/)<sup>2</sup>, [Takuma Seno](https://takuseno.github.io/)<sup>4</sup>, [I Made Aswin Nahrendra](https://anahrendra.github.io/)<sup>3</sup>, [Sehee Min](https://seiing.github.io/)<sup>1</sup>, [Daniel Palenicek](https://www.linkedin.com/in/danielpalenicek/)<sup>5,6</sup>, [Florian Vogt](https://scholar.google.com/citations?user=PvEf33EAAAAJ)<sup>7</sup>, [Danica Kragic](https://www.csc.kth.se/~dani/)<sup>7</sup>, [Jan Peters](https://www.ias.informatik.tu-darmstadt.de/Member/JanPeters)<sup>5,6,8</sup>, [Jaegul Choo](https://sites.google.com/site/jaegulchoo/)<sup>2</sup>, [Hojoon Lee](https://joonleesky.github.io/)<sup>1</sup>
 >
