@@ -241,3 +241,14 @@ play_isaaclab.py   # IsaacLab visualization entry point
 uv sync --dev    # install formatters, linter, type checker
 ./bin/lint       # run Black, Ruff, Mypy
 ```
+
+## Citation
+
+```bibtex
+@article{kim2026flashsac,
+  title={FlashSAC: Fast and Stable Off-Policy Reinforcement Learning for High-Dimensional Robot Control},
+  author={Kim, Donghu and Lee, Youngdo and Park, Minho and Kim, Kinam and Nahendra, I Made Aswin and Seno, Takuma and Min, Sehee and Palenicek, Daniel and Vogt, Florian and Kragic, Danica and Peters, Jan and Choo, Jaegul and Lee, Hojoon},
+  journal={arXiv preprint arXiv:2604.04539},
+  year={2026}
+}
+```
