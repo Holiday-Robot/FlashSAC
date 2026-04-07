@@ -17,7 +17,7 @@ Official implementation of
 
 ## 🎬 Teaser Video
 
-https://github.com/user-attachments/assets/f794c512-0043-4700-be6a-932fec75248d
+https://github.com/user-attachments/assets/64be76d2-7851-45bc-bd24-a664978fed4a
 
 ## About FlashSAC
 
