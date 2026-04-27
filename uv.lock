@@ -1185,6 +1185,7 @@ dependencies = [
     { name = "pymeshlab" },
     { name = "rliable" },
     { name = "setuptools" },
+    { name = "sharpawave-rl-lab" },
     { name = "shimmy" },
     { name = "tensorboard" },
     { name = "tensorflow-probability", marker = "python_full_version < '3.11' or (extra == 'extra-7-flashrl-all' and extra == 'extra-7-flashrl-isaaclab') or (extra == 'extra-7-flashrl-genesis' and extra == 'extra-7-flashrl-isaaclab') or (extra == 'extra-7-flashrl-humanoid-bench' and extra == 'extra-7-flashrl-isaaclab')" },
@@ -1301,6 +1302,7 @@ requires-dist = [
     { name = "pymeshlab", specifier = "==2023.12.post3" },
     { name = "rliable", specifier = "==1.2.0" },
     { name = "setuptools", specifier = "<=65" },
+    { name = "sharpawave-rl-lab", git = "https://github.com/sharpa-robotics/sharpa-rl-lab.git?rev=main" },
     { name = "shimmy", specifier = ">=2.0.0" },
     { name = "tensorboard" },
     { name = "tensorflow-probability", marker = "python_full_version == '3.10.*'", specifier = "==0.24.0" },
@@ -6480,6 +6482,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/e2/ed/749424fd3cc1b55bb
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a2/dd/d8cdd14320106ff58d4eb6e6553bae7a822e174ad5b05db486332d50d4ec/setuptools-65.0.0-py3-none-any.whl", hash = "sha256:fe9a97f68b064a6ddd4bacfb0b4b93a4c65a556d97ce906255540439d0c35cef", size = 1217438, upload-time = "2022-08-14T17:40:27.359Z" },
 ]
+
+[[package]]
+name = "sharpawave-rl-lab"
+version = "1.0.1"
+source = { git = "https://github.com/sharpa-robotics/sharpa-rl-lab.git?rev=main#332c1d98bcd05d34d2c460eb8e6f4814fa2d6fd5" }
 
 [[package]]
 name = "shellingham"

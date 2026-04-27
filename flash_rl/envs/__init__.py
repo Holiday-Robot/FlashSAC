@@ -89,6 +89,7 @@ def create_envs(
             env_name=env_name,
             num_envs=num_train_envs,
             seed=seed,
+            use_priv_info=kwargs.get("use_priv_info", False),
         )
         # NOTE: IsaacLab/IsaacSim only supports one SimulationApp instance per process by design.
         # See https://github.com/isaac-sim/IsaacLab/discussions/1241

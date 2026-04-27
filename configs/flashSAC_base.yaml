@@ -2,13 +2,13 @@
 # Configurations
 ##################################################################################
 
-project_name: 'FlashRL'
-entity_name: 'draftrec'
+project_name: 'FlashSAC-mjlab'
+entity_name: 'fheller1-tu-darmstadt'
 group_name: 'test'
 exp_name: 'test'
 seed: 0
 
-logger_type: 'tensorboard'  # ['wandb','tensorboard']
+logger_type: 'wandb'  # ['wandb','tensorboard']
 save_path: 'models/${group_name}/${exp_name}/${env.env_name}/seed${seed}-TIMESTAMP'
 agent_load_path: null
 buffer_load_path: null
