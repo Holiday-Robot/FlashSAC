@@ -66,6 +66,7 @@ class IsaacLabVectorEnv(
         to_numpy: bool = True,
         headless: bool = True,
         use_priv_info: bool = False,
+        env_cfg_overrides: dict[str, Any] | None = None,
     ):
         from isaaclab.app import AppLauncher
 
@@ -86,6 +87,9 @@ class IsaacLabVectorEnv(
             num_envs=num_envs,
         )
         env_cfg.seed = seed
+        if env_cfg_overrides:
+            for k, v in env_cfg_overrides.items():
+                setattr(env_cfg, k, v)
         self.seed = seed
         self.device = device
         self.envs = gym.make(env_name, cfg=env_cfg, render_mode=None)
@@ -207,6 +211,7 @@ def make_isaaclab_env(
     seed: int,
     headless: bool = True,
     use_priv_info: bool = False,
+    env_cfg_overrides: dict[str, Any] | None = None,
 ) -> IsaacLabVectorEnv:
     if env_name not in ACTION_BOUNDS:
         print(f"Action bounds not defined for {env_name}; using default value 1.0.")
@@ -220,5 +225,6 @@ def make_isaaclab_env(
         to_numpy=True,
         headless=headless,
         use_priv_info=use_priv_info,
+        env_cfg_overrides=env_cfg_overrides,
     )
     return env

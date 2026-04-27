@@ -85,11 +85,19 @@ def create_envs(
         assert rescale_action is None, "Unused hyperparameter in IsaacLab."
         assert num_eval_envs is None, "Unused hyperparameter in IsaacLab."
         assert num_record_envs is None, "Unused hyperparameter in IsaacLab."
+        raw_overrides = kwargs.get("env_cfg_overrides") or {}
+        try:
+            from omegaconf import OmegaConf
+
+            env_cfg_overrides: dict[str, Any] = OmegaConf.to_container(raw_overrides, resolve=True)  # type: ignore[assignment]
+        except Exception:
+            env_cfg_overrides = dict(raw_overrides)
         train_env = make_isaaclab_env(
             env_name=env_name,
             num_envs=num_train_envs,
             seed=seed,
             use_priv_info=kwargs.get("use_priv_info", False),
+            env_cfg_overrides=env_cfg_overrides or None,
         )
         # NOTE: IsaacLab/IsaacSim only supports one SimulationApp instance per process by design.
         # See https://github.com/isaac-sim/IsaacLab/discussions/1241

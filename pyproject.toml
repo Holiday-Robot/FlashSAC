@@ -110,7 +110,7 @@ metaworld = { git = "https://github.com/Farama-Foundation/Metaworld.git", rev = 
 d4rl = { git = "https://github.com/takuseno/D4RL.git" }
 isaacsim = { index = "nvidia" }
 isaaclab = { index = "nvidia" }
-sharpawave-rl-lab = { git = "https://github.com/sharpa-robotics/sharpa-rl-lab.git", rev = "main" }
+sharpawave-rl-lab = { git = "https://github.com/fheller1/sharpa-rl-lab-qol.git", rev = "main" }
 
 [[tool.uv.index]]
 name = "nvidia"
