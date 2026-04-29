@@ -10,6 +10,7 @@ from ..types import F32NDArray, NDArray
 
 # NOTE: There is no way to get the action bounds from the env, so we hardcode them here following FastTD3
 ACTION_BOUNDS = {
+    "Isaac-Inhand-Rotate-Sharpa-Wave-v0": 1.0,
     "Isaac-Repose-Cube-Shadow-Direct-v0": 1.0,
     "Isaac-Repose-Cube-Allegro-Direct-v0": 1.0,
     "Isaac-Velocity-Flat-G1-v0": 1.0,
@@ -64,6 +65,8 @@ class IsaacLabVectorEnv(
         action_bounds: float,
         to_numpy: bool = True,
         headless: bool = True,
+        use_priv_info: bool = False,
+        env_cfg_overrides: dict[str, Any] | None = None,
     ):
         from isaaclab.app import AppLauncher
 
@@ -72,12 +75,21 @@ class IsaacLabVectorEnv(
 
         from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
 
+        # Register any extra task packages that may be installed alongside FlashSAC
+        try:
+            import rl_isaaclab.tasks.inhand_rotate  # noqa: F401
+        except ImportError:
+            pass
+
         env_cfg = parse_env_cfg(
             env_name,
             device=device,
             num_envs=num_envs,
         )
         env_cfg.seed = seed
+        if env_cfg_overrides:
+            for k, v in env_cfg_overrides.items():
+                setattr(env_cfg, k, v)
         self.seed = seed
         self.device = device
         self.envs = gym.make(env_name, cfg=env_cfg, render_mode=None)
@@ -89,6 +101,9 @@ class IsaacLabVectorEnv(
         # Get observation/action spaces
         # NOTE: Action range: [-1, 1] * action_bounds (https://github.com/google-deepmind/mujoco_playground/issues/19)
         self.obs_size = cast(Any, self.envs.unwrapped).single_observation_space["policy"].shape
+        self.use_priv_info = use_priv_info
+        unwrapped_cfg = cast(Any, self.envs.unwrapped).cfg
+        self.priv_info_dim = int(getattr(unwrapped_cfg, "priv_info_dim", 0)) if use_priv_info else 0
         self.asymmetric_obs = "critic" in cast(Any, self.envs.unwrapped).single_observation_space
         if self.asymmetric_obs:
             # NOTE: Env will treat concatenate actor & critic states as the observation,
@@ -101,7 +116,8 @@ class IsaacLabVectorEnv(
             self.observation_space = batch_space(self.single_observation_space, self.num_envs)
         else:
             self.critic_obs_size = 0
-            self.single_observation_space = gym.spaces.Box(low=0.0, high=0.0, shape=self.obs_size, dtype=np.float32)
+            obs_shape = (self.obs_size[0] + self.priv_info_dim,)
+            self.single_observation_space = gym.spaces.Box(low=0.0, high=0.0, shape=obs_shape, dtype=np.float32)
             self.observation_space = batch_space(self.single_observation_space, self.num_envs)
 
         self.action_bounds = action_bounds
@@ -125,6 +141,8 @@ class IsaacLabVectorEnv(
             obs = torch.cat((obs, critic_obs), dim=-1)
         else:
             critic_obs = None
+        if self.use_priv_info:
+            obs = torch.cat((obs, obs_dict["priv_info"]), dim=-1)
         # NOTE: decorrelate episode horizons like RSL‑RL
         # In IsaacLab, `dones` is computed as follows:
         # `time_out = self.episode_length_buf >= self.max_episode_length - 1`
@@ -138,7 +156,13 @@ class IsaacLabVectorEnv(
         if self.to_numpy:
             obs = obs.cpu().numpy()
             infos = recursive_to_numpy(infos)  # type: ignore
-        infos.update({"actor_observation_size": self.obs_size, "asymmetric_obs": self.asymmetric_obs})
+        infos.update(
+            {
+                "actor_observation_size": self.obs_size,
+                "asymmetric_obs": self.asymmetric_obs,
+                "priv_info_dim": self.priv_info_dim,
+            }
+        )
         return obs, infos
 
     def step(self, actions: Union[torch.Tensor, F32NDArray]) -> tuple[
@@ -162,7 +186,16 @@ class IsaacLabVectorEnv(
             obs = torch.cat((obs, critic_obs), dim=-1)
         else:
             critic_obs = None
+        if self.use_priv_info:
+            obs = torch.cat((obs, obs_dict["priv_info"]), dim=-1)
+        episode_info = {
+            k: float(v)
+            for k, v in infos.items()
+            if isinstance(v, (float, int)) or (isinstance(v, torch.Tensor) and v.numel() == 1)
+        }
         infos = {"time_outs": truncations, "observations": {"critic": critic_obs}}
+        if episode_info:
+            infos["episode_info"] = episode_info
         # NOTE: There's really no way to get the raw observations from IsaacLab
         # We just use the 'reset_obs' as next_obs, unfortunately.
         # See https://github.com/isaac-sim/IsaacLab/issues/1362
@@ -190,6 +223,8 @@ def make_isaaclab_env(
     num_envs: int,
     seed: int,
     headless: bool = True,
+    use_priv_info: bool = False,
+    env_cfg_overrides: dict[str, Any] | None = None,
 ) -> IsaacLabVectorEnv:
     if env_name not in ACTION_BOUNDS:
         print(f"Action bounds not defined for {env_name}; using default value 1.0.")
@@ -202,5 +237,7 @@ def make_isaaclab_env(
         action_bounds=action_bounds,
         to_numpy=True,
         headless=headless,
+        use_priv_info=use_priv_info,
+        env_cfg_overrides=env_cfg_overrides,
     )
     return env

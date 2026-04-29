@@ -54,3 +54,7 @@ use_amp: true
 
 load_optimizer: true
 load_reward_normalizer: true
+
+actor_priv_info_mode: 'concat'   # 'concat' | 'env_mlp'
+critic_priv_info_mode: 'concat'  # 'concat' | 'env_mlp'
+env_mlp_units: null

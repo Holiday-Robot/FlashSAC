@@ -1,0 +1,13 @@
+##################################################################################
+# FlashSAC RMA Phase 1
+# Actor uses env_mlp to encode priv_info into a latent (asymmetric: critic sees raw).
+# Compatible with Phase 2 (train_rma.py) which trains ProprioAdaptTConv to predict
+# the env_mlp latent from proprioception history.
+##################################################################################
+
+defaults:
+  - flashSAC
+
+actor_priv_info_mode: 'env_mlp'
+critic_priv_info_mode: 'concat'
+env_mlp_units: [256, 128, 8]

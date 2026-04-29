@@ -6,7 +6,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "2"
 
 import argparse
 import random
-from typing import MutableMapping, Optional
+from typing import Any, MutableMapping, Optional, cast
 
 import hydra
 import numpy as np
@@ -43,13 +43,25 @@ def play(args: argparse.Namespace) -> None:
         torch.backends.cudnn.allow_tf32 = True
         torch.set_float32_matmul_precision("high")
 
-    # Create environment with rendering (headless=False)
+    raw_overrides = getattr(cfg.env, "env_cfg_overrides", None) or {}
+    try:
+        env_cfg_overrides = OmegaConf.to_container(raw_overrides, resolve=True)
+    except Exception:
+        env_cfg_overrides = dict(raw_overrides)
     env = make_isaaclab_env(
         env_name=cfg.env.env_name,
         num_envs=num_envs,
         seed=cfg.seed,
-        headless=False,
+        headless=args.headless,
+        use_priv_info=getattr(cfg.env, "use_priv_info", False),
+        env_cfg_overrides=env_cfg_overrides or None,
     )
+
+    # Set full gravity and disable curriculum (env starts at g=-0.05 with curriculum)
+    import carb
+    unwrapped = cast(Any, env.envs.unwrapped)
+    unwrapped.cfg.gravity_curriculum = False
+    env.envs.unwrapped.physics_sim_view.set_gravity(carb.Float3(0.0, 0.0, -9.81))  # type: ignore
 
     # Create agent using config (same as train.py)
     _, env_info = env.reset(random_start_init=False)
@@ -99,5 +111,6 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint_path", type=str, required=True, help="Path to agent checkpoint directory")
     parser.add_argument("--num_envs", type=int, default=16, help="Number of parallel environments for visualization")
     parser.add_argument("--num_episodes", type=int, default=10, help="Number of episodes to play")
+    parser.add_argument("--headless", action="store_true", default=False, help="Run without display")
     args = parser.parse_args()
     play(args)
