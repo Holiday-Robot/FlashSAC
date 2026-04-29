@@ -19,7 +19,7 @@ use_priv_info: true
 env_cfg_overrides:
   gravity_curriculum: true
   reset_random_quat: false
-  # grasp_cache_path: 'cache/my_cache'
+  grasp_cache_path: '/home/fheller/sharpa-rl-lab-qol/cache/sharpa_grasp_linspace'
   randomize_friction: true
   randomize_mass: true
   enable_tactile: true

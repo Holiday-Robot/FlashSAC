@@ -13,6 +13,7 @@ from flash_rl.agents.flashSAC.network import (
     FlashSACActor,
     FlashSACDoubleCritic,
     FlashSACTemperature,
+    build_env_mlp,
 )
 from flash_rl.agents.flashSAC.update import (
     update_actor,
@@ -77,6 +78,10 @@ class FlashSACConfig:
     load_optimizer: bool
     load_reward_normalizer: bool
 
+    actor_priv_info_mode: str  # 'concat' | 'env_mlp'
+    critic_priv_info_mode: str  # 'concat' | 'env_mlp'
+    env_mlp_units: Optional[list[int]]
+
 
 def _init_flashsac_networks(
     actor_observation_dim: int,
@@ -84,6 +89,7 @@ def _init_flashsac_networks(
     action_dim: int,
     cfg: FlashSACConfig,
     device: torch.device,
+    priv_info_dim: int = 0,
 ) -> tuple[Network, Network, Network, Network]:
     # Create learning rate schedule
     warmup_cosine_decay_lr = warmup_cosine_decay_scheduler(
@@ -94,12 +100,29 @@ def _init_flashsac_networks(
         decay_steps=cfg.learning_rate_decay_step,
     )
 
+    env_mlp_units = list(cfg.env_mlp_units) if cfg.env_mlp_units else []
+
+    actor_env_mlp = None
+    if cfg.actor_priv_info_mode == "env_mlp" and priv_info_dim > 0:
+        assert env_mlp_units, "env_mlp_units must be set when actor_priv_info_mode='env_mlp'"
+        actor_env_mlp = build_env_mlp(priv_info_dim, env_mlp_units).to(device)
+
+    critic_env_mlp = None
+    if cfg.critic_priv_info_mode == "env_mlp" and priv_info_dim > 0:
+        assert env_mlp_units, "env_mlp_units must be set when critic_priv_info_mode='env_mlp'"
+        critic_env_mlp = build_env_mlp(priv_info_dim, env_mlp_units).to(device)
+
+    actor_priv_info_dim = priv_info_dim if cfg.actor_priv_info_mode == "env_mlp" else 0
+    critic_priv_info_dim = priv_info_dim if cfg.critic_priv_info_mode == "env_mlp" else 0
+
     # Initialize actor
     actor_net = FlashSACActor(
         num_blocks=cfg.actor_num_blocks,
         input_dim=actor_observation_dim,
         hidden_dim=cfg.actor_hidden_dim,
         action_dim=action_dim,
+        priv_info_dim=actor_priv_info_dim,
+        env_mlp=actor_env_mlp,
     ).to(device)
 
     use_fused = device.type == "cuda" and torch.cuda.is_available()
@@ -128,6 +151,8 @@ def _init_flashsac_networks(
         num_bins=cfg.critic_num_bins,
         min_v=cfg.critic_min_v,
         max_v=cfg.critic_max_v,
+        priv_info_dim=critic_priv_info_dim,
+        env_mlp=critic_env_mlp,
     ).to(device)
 
     critic_optimizer = optim.Adam(
@@ -156,6 +181,8 @@ def _init_flashsac_networks(
         num_bins=cfg.critic_num_bins,
         min_v=cfg.critic_min_v,
         max_v=cfg.critic_max_v,
+        priv_info_dim=critic_priv_info_dim,
+        env_mlp=critic_env_mlp,
     ).to(device)
     target_critic_net.load_state_dict(critic_net.state_dict())
     target_critic = Network(
@@ -373,6 +400,7 @@ class FlashSACAgent(BaseAgent[FlashSACConfig]):
         self._device = torch.device(device_type)
 
         # Initialize networks
+        priv_info_dim = int(env_info.get("priv_info_dim", 0))
         (
             self._actor,
             self._critic,
@@ -384,6 +412,7 @@ class FlashSACAgent(BaseAgent[FlashSACConfig]):
             action_dim=self._action_dim,
             cfg=self._cfg,
             device=self._device,
+            priv_info_dim=priv_info_dim,
         )
         self._update_step = 0
 

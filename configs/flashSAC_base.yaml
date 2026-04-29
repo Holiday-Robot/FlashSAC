@@ -4,8 +4,8 @@
 
 project_name: 'FlashSAC-mjlab'
 entity_name: 'fheller1-tu-darmstadt'
-group_name: 'test'
-exp_name: 'test'
+group_name: 'sharpa-benchmark'
+exp_name: 'priv-info'
 seed: 0
 
 logger_type: 'wandb'  # ['wandb','tensorboard']

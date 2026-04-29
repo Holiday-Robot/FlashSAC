@@ -156,7 +156,13 @@ class IsaacLabVectorEnv(
         if self.to_numpy:
             obs = obs.cpu().numpy()
             infos = recursive_to_numpy(infos)  # type: ignore
-        infos.update({"actor_observation_size": self.obs_size, "asymmetric_obs": self.asymmetric_obs})
+        infos.update(
+            {
+                "actor_observation_size": self.obs_size,
+                "asymmetric_obs": self.asymmetric_obs,
+                "priv_info_dim": self.priv_info_dim,
+            }
+        )
         return obs, infos
 
     def step(self, actions: Union[torch.Tensor, F32NDArray]) -> tuple[
@@ -182,7 +188,14 @@ class IsaacLabVectorEnv(
             critic_obs = None
         if self.use_priv_info:
             obs = torch.cat((obs, obs_dict["priv_info"]), dim=-1)
+        episode_info = {
+            k: float(v)
+            for k, v in infos.items()
+            if isinstance(v, (float, int)) or (isinstance(v, torch.Tensor) and v.numel() == 1)
+        }
         infos = {"time_outs": truncations, "observations": {"critic": critic_obs}}
+        if episode_info:
+            infos["episode_info"] = episode_info
         # NOTE: There's really no way to get the raw observations from IsaacLab
         # We just use the 'reset_obs' as next_obs, unfortunately.
         # See https://github.com/isaac-sim/IsaacLab/issues/1362

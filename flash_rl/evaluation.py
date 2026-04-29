@@ -77,7 +77,7 @@ def evaluate(
             total_success_end_list.append(success_end[env_idx].astype("bool").astype("float"))
 
     eval_info = {
-        "avg_return": float(np.mean(total_return_list)),
+        "episode_rewards": float(np.mean(total_return_list)),
         "avg_length": float(np.mean(total_length_list)),
         "avg_success_once": float(np.mean(total_success_once_list)),
         "avg_success_end": float(np.mean(total_success_end_list)),

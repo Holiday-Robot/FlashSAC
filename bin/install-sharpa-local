@@ -1,0 +1,12 @@
+#!/bin/bash
+# Install sharpawave-rl-lab from a local path for development.
+# Overrides the git source in pyproject.toml within the current venv.
+#
+# Usage:
+#   SHARPA_RL_LAB_PATH=/path/to/sharpa-rl-lab-qol ./bin/install-sharpa-local
+#   # or export it in your shell profile:
+#   export SHARPA_RL_LAB_PATH=/home/fheller/sharpa-rl-lab-qol
+
+: "${SHARPA_RL_LAB_PATH:?Error: SHARPA_RL_LAB_PATH is not set}"
+
+uv pip install -e "$SHARPA_RL_LAB_PATH"
