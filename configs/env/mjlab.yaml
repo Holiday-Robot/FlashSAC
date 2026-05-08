@@ -1,0 +1,15 @@
+##################################################################################
+# mjlab (GPU Simulator)
+##################################################################################
+
+env_type: 'mjlab'
+env_name: 'Mjlab-Velocity-Flat-Unitree-G1'
+num_env_steps: ${num_env_steps}
+
+seed: ${seed}
+num_train_envs: ${num_train_envs}
+num_eval_envs: null
+num_record_envs: null
+rescale_action: null
+max_episode_steps: null
+device: null  # null = auto (cuda:0 if available)
