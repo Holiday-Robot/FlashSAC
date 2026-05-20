@@ -28,8 +28,6 @@ dependencies = [
     "gym>=0.26.0",
     "Cython==0.29.37",
     "pymeshlab==2023.12.post3",
-    "dm-control>=1.0.20",
-    "setuptools<=65",
 
     # [Config 1: Ubuntu 22.04 / RTX3090,4090 / Python 3.10]
     "torch>=2.5.1 ; python_version == '3.10'",
@@ -57,9 +55,8 @@ isaaclab = [
 ]
 mujoco-playground = [
     "playground==0.0.5",
-    "mujoco==3.3.3",
-    "mujoco-mjx==3.3.3",
 ]
+dmc = ["dm-control>=1.0.20"]
 maniskill = ["mani-skill"]
 genesis = ["genesis-world"]
 humanoid-bench = ["humanoid-bench"]
@@ -69,12 +66,11 @@ d4rl = [
     "d4rl",
     "mujoco-py>=2.1.2.14", # Old mujoco often needed for D4RL
 ]
+mjlab = ["mjlab"]
 
-# Full installation (excluding isaaclab due to conflict)
+# Full installation (excluding isaaclab and mjlab due to conflicts)
 all = [
     "playground==0.0.5",
-    "mujoco==3.3.3",
-    "mujoco-mjx==3.3.3",
     "mani-skill",
     "humanoid-bench",
     "myosuite",
@@ -85,10 +81,25 @@ all = [
 ]
 
 [tool.uv]
+environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+]
 conflicts = [
     [{ extra = "isaaclab" }, { extra = "genesis" }],
     [{ extra = "isaaclab" }, { extra = "humanoid-bench" }],
     [{ extra = "isaaclab" }, { extra = "all" }],
+    # isaacsim 5.1.0 (Python 3.11) requires mujoco>3.3.3; incompatible with mujoco-playground's mujoco==3.3.3
+    [{ extra = "isaaclab" }, { extra = "mujoco-playground" }],
+    # mjlab requires mujoco>=3.7.0 (for mujoco-warp); conflicts with other sim extras
+    [{ extra = "mjlab" }, { extra = "isaaclab" }],
+    [{ extra = "mjlab" }, { extra = "humanoid-bench" }],
+    [{ extra = "mjlab" }, { extra = "maniskill" }],
+    [{ extra = "mjlab" }, { extra = "myosuite" }],
+    [{ extra = "mjlab" }, { extra = "metaworld" }],
+    [{ extra = "mjlab" }, { extra = "d4rl" }],
+    [{ extra = "mjlab" }, { extra = "genesis" }],
+    [{ extra = "mjlab" }, { extra = "mujoco-playground" }],
+    [{ extra = "mjlab" }, { extra = "all" }],
 ]
 override-dependencies = [
     "pywin32==306 ; sys_platform == 'win32'",
@@ -111,6 +122,7 @@ metaworld = { git = "https://github.com/Farama-Foundation/Metaworld.git", rev = 
 d4rl = { git = "https://github.com/takuseno/D4RL.git" }
 isaacsim = { index = "nvidia" }
 isaaclab = { index = "nvidia" }
+mjlab = { git = "https://github.com/mujocolab/mjlab.git", rev = "main" }
 
 [[tool.uv.index]]
 name = "nvidia"
@@ -168,3 +180,16 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "flash_rl.envs.genesis_envs.*"
 ignore_errors = true
+
+[tool.setuptools]
+packages = [
+    "flash_rl",
+    "flash_rl.agents",
+    "flash_rl.agents.flashSAC",
+    "flash_rl.agents.utils",
+    "flash_rl.buffers",
+    "flash_rl.common",
+    "flash_rl.envs",
+    "flash_rl.envs.genesis_envs",
+    "flash_rl.envs.wrappers",
+]

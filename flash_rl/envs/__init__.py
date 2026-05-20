@@ -95,6 +95,24 @@ def create_envs(
         eval_env = train_env
         record_env = train_env
 
+    elif env_type == "mjlab":
+        from flash_rl.envs.mjlab import make_mjlab_env
+
+        assert rescale_action is None, "Unused hyperparameter in mjlab."
+        assert num_eval_envs is None, "Unused hyperparameter in mjlab (single sim instance)."
+        assert num_record_envs is None, "Unused hyperparameter in mjlab (single sim instance)."
+        import torch
+
+        device = kwargs.get("device") or ("cuda:0" if torch.cuda.is_available() else "cpu")
+        train_env = make_mjlab_env(
+            task_id=env_name,
+            num_envs=num_train_envs,
+            seed=seed,
+            device=device,
+        )
+        eval_env = train_env
+        record_env = train_env
+
     elif env_type == "maniskill":
         from flash_rl.envs.maniskill import make_maniskill_env
 

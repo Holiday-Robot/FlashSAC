@@ -77,6 +77,8 @@ class FlashSACConfig:
     load_optimizer: bool
     load_reward_normalizer: bool
 
+    buffer_obs_dtype: Optional[str] = None
+
 
 def _init_flashsac_networks(
     actor_observation_dim: int,
@@ -410,6 +412,7 @@ class FlashSACAgent(BaseAgent[FlashSACConfig]):
             )
 
         # Replay buffer
+        _obs_dtype = getattr(torch, self._cfg.buffer_obs_dtype) if self._cfg.buffer_obs_dtype is not None else None
         self._replay_buffer = TorchUniformBuffer(
             observation_space=observation_space,
             action_space=action_space,
@@ -419,6 +422,7 @@ class FlashSACAgent(BaseAgent[FlashSACConfig]):
             min_length=self._cfg.buffer_min_length,
             sample_batch_size=self._cfg.sample_batch_size,
             device_type=self._cfg.buffer_device_type,
+            obs_storage_dtype=_obs_dtype,
         )
 
     def sample_actions(

@@ -44,6 +44,7 @@ class TorchUniformBuffer(BaseBuffer):
         min_length: int,
         sample_batch_size: int,
         device_type: str,
+        obs_storage_dtype: Optional[torch.dtype] = None,
     ):
         super(TorchUniformBuffer, self).__init__(
             observation_space,
@@ -60,6 +61,7 @@ class TorchUniformBuffer(BaseBuffer):
             else ("cuda:0" if device_type.startswith("cuda") else "cpu")
         )
         self._device = torch.device(device_type)
+        self._obs_storage_dtype = obs_storage_dtype
         self.reset()
 
     def __len__(self) -> int:
@@ -79,11 +81,12 @@ class TorchUniformBuffer(BaseBuffer):
             self._action_space.dtype if self._action_space.dtype is not None else np.float32
         )
 
+        obs_storage_dtype = self._obs_storage_dtype or observation_dtype
         self._observations = torch.empty(
-            (m,) + observation_shape, dtype=observation_dtype, device=self._device, pin_memory=pin
+            (m,) + observation_shape, dtype=obs_storage_dtype, device=self._device, pin_memory=pin
         )
         self._next_observations = torch.empty(
-            (m,) + observation_shape, dtype=observation_dtype, device=self._device, pin_memory=pin
+            (m,) + observation_shape, dtype=obs_storage_dtype, device=self._device, pin_memory=pin
         )
         self._actions = torch.empty((m,) + action_shape, dtype=action_dtype, device=self._device, pin_memory=pin)
         self._rewards = torch.empty((m,), dtype=torch.float32, device=self._device, pin_memory=pin)
@@ -179,6 +182,10 @@ class TorchUniformBuffer(BaseBuffer):
         batch["terminated"] = self._terminateds[idxs]
         batch["truncated"] = self._truncateds[idxs]
         batch["next_observation"] = self._next_observations[idxs]
+
+        if self._obs_storage_dtype is not None:
+            batch["observation"] = cast(torch.Tensor, batch["observation"]).to(torch.float32)
+            batch["next_observation"] = cast(torch.Tensor, batch["next_observation"]).to(torch.float32)
 
         return batch
 

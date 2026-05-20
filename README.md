@@ -23,7 +23,7 @@ https://github.com/user-attachments/assets/0c0a650b-dd59-4cf4-8378-605006a00c63
 
 **FlashSAC** is a fast and stable off-policy reinforcement learning algorithm that achieves the highest asymptotic performance in the shortest wall-clock time for high-dimensional robotic control.
 
-This repository (**FlashSAC**) provides the full training framework, agent implementations, and environment integrations used in the paper, supporting **over 100 tasks across diverse simulators**: IsaacLab, MuJoCo Playground, ManiSkill, Genesis, HumanoidBench, MyoSuite, MuJoCo, Meta-World, and DeepMind Control Suite.
+This repository (**FlashSAC**) provides the full training framework, agent implementations, and environment integrations used in the paper, supporting **over 100 tasks across diverse simulators**: IsaacLab, mjlab, MuJoCo Playground, ManiSkill, Genesis, HumanoidBench, MyoSuite, MuJoCo, Meta-World, and DeepMind Control Suite.
 
 If you're using PPO, try **FlashSAC**!
 
@@ -79,19 +79,25 @@ uv run python -c "import gymnasium; gymnasium.make('HalfCheetah-v4')"
 
 ### 5. Optional Environment Dependencies
 
-By default, only MuJoCo and DMC are available. Install additional environments with:
+By default, only MuJoCo (via Gymnasium) is available. Install additional environments with:
 
 ```bash
 uv sync --extra <environment>
 ```
 
-Available extras: `isaaclab`, `mujoco-playground`, `maniskill`, `genesis`, `humanoid-bench`, `myosuite`, `metaworld`, `all`
+Available extras: `isaaclab`, `mjlab`, `mujoco-playground`, `maniskill`, `genesis`, `humanoid-bench`, `myosuite`, `metaworld`, `d4rl`, `dmc`, `all`
 
 > [!NOTE]
 > `mujoco-playground` has known issues with JAX > 0.5.2 (NaN values, training collapse — see [issue #153](https://github.com/google-deepmind/mujoco_playground/issues/153)) and may not work with Python 3.11.
 
 > [!NOTE]
-> `isaaclab` cannot be installed alongside `genesis` or `humanoid-bench` due to dependency conflicts. If you need IsaacLab, install it in a separate virtual environment with `uv sync --extra isaaclab`. For the same reason, `all` installs every extra **except** `isaaclab`.
+> `isaaclab` cannot be installed alongside `genesis` or `humanoid-bench` due to dependency conflicts. If you need IsaacLab, install it in a separate virtual environment with `uv sync --extra isaaclab`. For the same reason, `all` installs every extra **except** `isaaclab` and `mjlab`.
+
+> [!NOTE]
+> `mjlab` (MuJoCo-Warp GPU simulator) requires mujoco>=3.7 and conflicts with `mujoco-playground`, `myosuite`, `metaworld`, `maniskill`, `d4rl`, `genesis`, `humanoid-bench`, and `all`. Install it in isolation: `uv sync --extra mjlab`.
+
+> [!NOTE]
+> `dmc` (DeepMind Control Suite via dm-control) is an optional extra. Install it explicitly if you use DMC-based tasks: `uv sync --extra dmc`.
 
 ## Training
 
@@ -114,6 +120,7 @@ Example scripts for each environment are provided in `scripts/`:
 ```bash
 bash scripts/run_mujoco.sh
 bash scripts/run_isaaclab.sh
+bash scripts/run_mjlab.sh
 ```
 
 ### Configuration
@@ -138,7 +145,7 @@ tensorboard --logdir runs
 
 FlashSAC adapts its configuration based on the simulator type for optimal speed:
 
-| | GPU simulators (IsaacLab, MJP, Genesis, ManiSkill) | CPU simulators (MuJoCo, DMC, HBench, Myosuite) |
+| | GPU simulators (IsaacLab, mjlab, MJP, Genesis, ManiSkill) | CPU simulators (MuJoCo, DMC, HBench, Myosuite) |
 |---|---|---|
 | `num_envs` | 1024 | 1 |
 | `batch_size` | 2048 | 512 |
@@ -219,6 +226,36 @@ Key arguments:
 > [!NOTE]
 > `agent.buffer_max_length` can be set to a small value (e.g., 1) since the replay buffer is not used during play.
 
+## Visualization (mjlab)
+
+Trained mjlab agents can be visualized using `play_mjlab.py`, which supports interactive and headless modes via mjlab's native viewer infrastructure.
+
+```bash
+uv run --frozen python play_mjlab.py \
+    --checkpoint_path 'models/.../step488281' \
+    --num_envs 4 \
+    --overrides env=mjlab \
+    --overrides env.env_name='Mjlab-Velocity-Flat-Unitree-G1' \
+    --overrides agent=flashSAC
+```
+
+Key arguments:
+
+| Argument | Description |
+|---|---|
+| `--checkpoint_path` | Path to the saved checkpoint directory (contains `actor.pt`, etc.) |
+| `--num_envs` | Number of parallel environments (default: 4) |
+| `--viewer` | `auto` (default), `native` (MuJoCo GUI, requires display), `viser` (browser-based), `none` (headless) |
+| `--video OUTPUT_DIR` | Save a video of the first episode to `OUTPUT_DIR` (combinable with any viewer) |
+| `--num_steps` | Steps to run in headless mode (`--viewer none`, default: 1000) |
+| `--overrides` | Same Hydra overrides used during training |
+
+> [!NOTE]
+> `--viewer viser` works on headless servers — it starts a local web server and prints a URL to open in your browser (requires SSH port forwarding, e.g. `ssh -L 8080:localhost:8080 <server>`).
+
+> [!NOTE]
+> `--viewer native` requires `$DISPLAY` or `$WAYLAND_DISPLAY` to be set. `--viewer auto` selects native if a display is available, otherwise viser.
+
 ## Project Structure
 
 ```
@@ -233,6 +270,7 @@ scripts/           # Launch scripts per environment
 results/           # Experiment results and plots
 train.py           # Training entry point
 play_isaaclab.py   # IsaacLab visualization entry point
+play_mjlab.py      # mjlab visualization entry point
 ```
 
 ## Development
