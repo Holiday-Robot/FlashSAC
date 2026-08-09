@@ -178,6 +178,7 @@ def update_critic(
     device: torch.device,
     use_amp: bool,
     grad_scaler: Optional[GradScaler],
+    categorical_target_backend: str = "pytorch",
 ) -> dict[str, torch.Tensor]:
     """Update critic network.
 
@@ -195,6 +196,7 @@ def update_critic(
         device: Device to use.
         use_amp: Whether to use automatic mixed precision.
         grad_scaler: GradScaler for FP16 AMP.
+        categorical_target_backend: Backend for categorical TD-target construction.
     """
 
     with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=use_amp):
@@ -223,19 +225,36 @@ def update_critic(
             )
             next_qs = qs_all.chunk(2, dim=1)[1]
             next_q_log_probs = q_infos_all["log_prob"].chunk(2, dim=1)[1]
-            next_q_log_probs = _select_min_q_log_probs(next_qs, next_q_log_probs)
 
             # Compute target probs
-            target_probs = _compute_categorical_td_target(
-                target_log_probs=next_q_log_probs,
-                reward=batch["reward"],  # type: ignore
-                done=batch["terminated"],  # type: ignore
-                actor_entropy=next_actor_entropy,
-                gamma=gamma**n_step,
-                num_bins=num_bins,
-                min_v=min_v,
-                max_v=max_v,
-            )
+            target_probs = None
+            if categorical_target_backend == "triton":
+                from flash_rl.agents.flashSAC._triton import try_fused_categorical_td_target
+
+                target_probs = try_fused_categorical_td_target(
+                    next_qs,
+                    next_q_log_probs,
+                    batch["reward"],  # type: ignore
+                    batch["terminated"],  # type: ignore
+                    next_actor_entropy,
+                    gamma**n_step,
+                    num_bins,
+                    min_v,
+                    max_v,
+                )
+
+            if target_probs is None:
+                next_q_log_probs = _select_min_q_log_probs(next_qs, next_q_log_probs)
+                target_probs = _compute_categorical_td_target(
+                    target_log_probs=next_q_log_probs,
+                    reward=batch["reward"],  # type: ignore
+                    done=batch["terminated"],  # type: ignore
+                    actor_entropy=next_actor_entropy,
+                    gamma=gamma**n_step,
+                    num_bins=num_bins,
+                    min_v=min_v,
+                    max_v=max_v,
+                )
             max_entropy_bonus = next_actor_entropy.max()
 
         # Compute predicted q-value
