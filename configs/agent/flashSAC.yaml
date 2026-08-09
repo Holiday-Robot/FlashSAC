@@ -40,6 +40,7 @@ critic_num_bins: 101
 critic_min_v: ${eval:'-${agent.normalized_G_max}'}
 critic_max_v: ${eval:'${agent.normalized_G_max}'}
 critic_target_update_tau: 0.01
+categorical_target_backend: 'pytorch'  # 'pytorch' or optional 'triton'
 
 temp_initial_value: 0.01
 temp_target_sigma: 0.15

@@ -76,6 +76,7 @@ class FlashSACConfig:
 
     load_optimizer: bool
     load_reward_normalizer: bool
+    categorical_target_backend: str = "pytorch"
 
 
 def _init_flashsac_networks(
@@ -306,6 +307,7 @@ def _update_networks(
         device=device,
         use_amp=cfg.use_amp,
         grad_scaler=grad_scaler,
+        categorical_target_backend=cfg.categorical_target_backend,
     )
 
     target_critic_info = update_target_network(
@@ -354,6 +356,10 @@ class FlashSACAgent(BaseAgent[FlashSACConfig]):
 
         temp_target_entropy = 0.5 * self._action_dim * math.log(2 * math.pi * math.e * cfg.temp_target_sigma**2)
         compile_mode = _resolve_compile_mode(cfg.compile_mode)
+        if cfg.categorical_target_backend not in ("pytorch", "triton"):
+            raise ValueError(
+                f"categorical_target_backend must be 'pytorch' or 'triton', got {cfg.categorical_target_backend!r}"
+            )
         cfg = replace(cfg, temp_target_entropy=temp_target_entropy, compile_mode=compile_mode)
 
         super().__init__(
