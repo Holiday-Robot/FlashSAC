@@ -124,6 +124,9 @@ dev = [
     "ipdb",
 ]
 
+[tool.setuptools.packages.find]
+include = ["flash_rl*"]
+
 [tool.ruff]
 exclude = [".git", ".mypy_cache", ".ruff_cache", ".venv"]
 line-length = 120
