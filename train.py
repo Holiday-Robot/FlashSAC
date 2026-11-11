@@ -10,6 +10,7 @@ os.environ["XLA_FLAGS"] = "--xla_cpu_multi_thread_eigen=false intra_op_paralleli
 import argparse
 import random
 import sys
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -116,11 +117,54 @@ def run(args: argparse.Namespace) -> None:
     update_counter = 0
     update_info = {}
 
+    # wall-clock accounting (seconds) and update counts, logged with every metrics row
+    times = {"collect": 0.0, "update": 0.0, "eval": 0.0}
+    num_updates = 0
+    num_actor_updates = 0
+    train_start = time.perf_counter()
+
+    def run_evaluation(env_step: int) -> None:
+        start = time.perf_counter()
+        eval_info = evaluate(agent, eval_env, cfg.num_eval_episodes, cfg.env.env_type)
+        times["eval"] += time.perf_counter() - start
+        logger.update_metric(**eval_info)
+        # when exactly this evaluation happened (rows are only written every logging interval)
+        logger.update_metric(
+            eval_env_step=env_step,
+            eval_train_time=time.perf_counter() - train_start - times["eval"],
+            eval_num_updates=num_updates,
+        )
+
+    def run_recording() -> None:
+        start = time.perf_counter()
+        video_info = record_video(agent, record_env, cfg.num_record_episodes, cfg.env.env_type)
+        times["eval"] += time.perf_counter() - start
+        logger.update_metric(**video_info)
+
+    def log_progress(env_step: int) -> None:
+        elapsed = time.perf_counter() - train_start
+        train_time = elapsed - times["eval"]
+        progress = {
+            "time/train_time": train_time,  # wall-clock without evaluation / video recording
+            "time/collect_time": times["collect"],
+            "time/update_time": times["update"],
+            "time/eval_time": times["eval"],
+            "time/env_steps_per_sec": env_step / max(train_time, 1e-8),
+            "train/num_updates": num_updates,
+            "train/num_actor_updates": num_actor_updates,
+        }
+        if torch.cuda.is_available():
+            progress["time/gpu_max_memory_gb"] = torch.cuda.max_memory_allocated() / 1e9
+        logger.update_metric(**progress)
+        logger.log_metric(step=env_step)
+        logger.reset()
+
     for interaction_step in tqdm.tqdm(range(1, int(cfg.num_interaction_steps + 1)), smoothing=0.1, mininterval=0.5):
         # using env steps simplifies the comparison with the performance reported in the paper.
         env_step = interaction_step * cfg.num_train_envs
 
         # collect data. use random actions until agent.can_start_training()
+        collect_start = time.perf_counter()
         if agent.can_start_training() and transition is not None:
             actions = agent.sample_actions(interaction_step, prev_transition=transition, training=True)
         else:
@@ -148,20 +192,24 @@ def run(args: argparse.Namespace) -> None:
         agent.process_transition(transition)
         transition["next_observation"] = next_observations
         observations = next_observations
+        times["collect"] += time.perf_counter() - collect_start
 
         if agent.can_start_training():
             # update network
             # updates_per_interaction_step can be below 1.0
+            update_start = time.perf_counter()
             update_counter += cfg.updates_per_interaction_step
             while update_counter >= 1:
                 update_info = agent.update()
                 logger.update_metric(**update_info)
                 update_counter -= 1
+                num_updates += 1
+                num_actor_updates += "actor/loss" in update_info
+            times["update"] += time.perf_counter() - update_start
 
             # evaluation
             if cfg.evaluation_per_interaction_step and interaction_step % cfg.evaluation_per_interaction_step == 0:
-                eval_info = evaluate(agent, eval_env, cfg.num_eval_episodes, cfg.env.env_type)
-                logger.update_metric(**eval_info)
+                run_evaluation(env_step)
 
             # metrics
             if cfg.metrics_per_interaction_step and interaction_step % cfg.metrics_per_interaction_step == 0:
@@ -170,13 +218,11 @@ def run(args: argparse.Namespace) -> None:
 
             # video recording
             if cfg.recording_per_interaction_step and interaction_step % cfg.recording_per_interaction_step == 0:
-                video_info = record_video(agent, record_env, cfg.num_record_episodes, cfg.env.env_type)
-                logger.update_metric(**video_info)
+                run_recording()
 
             # logging
             if cfg.logging_per_interaction_step and interaction_step % cfg.logging_per_interaction_step == 0:
-                logger.log_metric(step=env_step)
-                logger.reset()
+                log_progress(env_step)
 
             # checkpointing
             if (
@@ -192,12 +238,9 @@ def run(args: argparse.Namespace) -> None:
                 agent.save_replay_buffer(save_path)
 
     # final evaluation
-    eval_info = evaluate(agent, eval_env, cfg.num_eval_episodes, cfg.env.env_type)
-    video_info = record_video(agent, record_env, cfg.num_record_episodes, cfg.env.env_type)
-    logger.update_metric(**eval_info)
-    logger.update_metric(**video_info)
-    logger.log_metric(step=env_step)
-    logger.reset()
+    run_evaluation(env_step)
+    run_recording()
+    log_progress(env_step)
 
     train_env.close()
     eval_env.close()

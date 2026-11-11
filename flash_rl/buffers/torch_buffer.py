@@ -44,7 +44,20 @@ class TorchUniformBuffer(BaseBuffer):
         min_length: int,
         sample_batch_size: int,
         device_type: str,
+        sampler: str = "uniform",
+        swd_decay_steps: int = 2000,
+        swd_min_weight: float = 0.1,
     ):
+        """
+        sampler: "uniform", or "swd" for WarpSAC's Sample Weight Decay (recency-biased sampling).
+        swd_decay_steps: SWD decay horizon, in interaction steps (one step = one `add` call).
+        swd_min_weight: SWD weight floor for transitions older than the decay horizon.
+        """
+        assert sampler in ("uniform", "swd"), f"Unknown buffer sampler: {sampler}"
+        assert swd_decay_steps > 0 and 0.0 < swd_min_weight <= 1.0
+        self._sampler = sampler
+        self._swd_decay_steps = swd_decay_steps
+        self._swd_min_weight = swd_min_weight
         super(TorchUniformBuffer, self).__init__(
             observation_space,
             action_space,
@@ -93,6 +106,7 @@ class TorchUniformBuffer(BaseBuffer):
         self._n_step_transitions: deque[dict[str, Any]] = deque(maxlen=self._n_step)
         self._num_in_buffer = 0
         self._current_idx = 0
+        self._add_batch_size = 1  # transitions written per `add` call (= number of train envs)
 
     def _to_tensor(self, value: Any) -> torch.Tensor:
         """Convert a value to a tensor on the buffer device (cloned if already a tensor)."""
@@ -145,6 +159,7 @@ class TorchUniformBuffer(BaseBuffer):
             n_step_prev_transition = cast(dict[str, torch.Tensor], self._get_n_step_prev_transition())
 
             add_batch_size = len(n_step_prev_transition["observation"])
+            self._add_batch_size = add_batch_size
             end_idx = self._current_idx + add_batch_size
 
             if end_idx <= self._max_length:
@@ -166,11 +181,34 @@ class TorchUniformBuffer(BaseBuffer):
     def can_sample(self) -> bool:
         return self._num_in_buffer >= self._min_length
 
-    def sample(self, sample_idxs: Optional[NDArray] = None) -> Batch:
-        if sample_idxs is None:
-            idxs = torch.randint(0, self._num_in_buffer, (self._sample_batch_size,), device=self._device)
-        else:
+    def _sample_swd_idxs(self, batch_size: int) -> torch.Tensor:
+        """
+        Sample Weight Decay (WarpSAC, https://arxiv.org/abs/2608.24479).
+        A transition added `age` interaction steps ago is drawn with probability proportional to
+        max(swd_min_weight, 1 - age / swd_decay_steps).
+        All transitions of one `add` call share an age, so we draw the step first and then a slot within it.
+        """
+        n = self._add_batch_size
+        num_steps = -(-self._num_in_buffer // n)  # ceil: the oldest step may be partially overwritten
+        step_ages = torch.arange(1, num_steps + 1, device=self._device)  # newest step has age 1, as in WarpSAC
+        step_weights = torch.clamp(1.0 - step_ages / self._swd_decay_steps, min=self._swd_min_weight)
+        step_sizes = torch.full((num_steps,), n, device=self._device)
+        step_sizes[-1] = self._num_in_buffer - (num_steps - 1) * n
+
+        steps = torch.multinomial(step_weights * step_sizes, batch_size, replacement=True)
+        offsets = (torch.rand(batch_size, device=self._device) * step_sizes[steps]).long()
+        slot_ages = steps * n + offsets  # 0 = most recently written slot
+        idxs: torch.Tensor = (self._current_idx - 1 - slot_ages) % self._max_length
+        return idxs
+
+    def sample(self, sample_idxs: Optional[NDArray] = None, batch_size: Optional[int] = None) -> Batch:
+        batch_size = batch_size or self._sample_batch_size
+        if sample_idxs is not None:
             idxs = torch.as_tensor(sample_idxs, device=self._device)
+        elif self._sampler == "swd":
+            idxs = self._sample_swd_idxs(batch_size)
+        else:
+            idxs = torch.randint(0, self._num_in_buffer, (batch_size,), device=self._device)
 
         batch: Batch = {}
         batch["observation"] = self._observations[idxs]
@@ -179,6 +217,9 @@ class TorchUniformBuffer(BaseBuffer):
         batch["terminated"] = self._terminateds[idxs]
         batch["truncated"] = self._truncateds[idxs]
         batch["next_observation"] = self._next_observations[idxs]
+        # staleness: how many interaction steps ago each transition was added (0 = newest)
+        slot_ages = (self._current_idx - 1 - idxs) % self._max_length
+        batch["age"] = (slot_ages // self._add_batch_size).float()
 
         return batch
 
@@ -199,6 +240,7 @@ class TorchUniformBuffer(BaseBuffer):
             "next_observation": self._next_observations[:n],
             "num_in_buffer": self._num_in_buffer,
             "current_idx": self._current_idx,
+            "add_batch_size": self._add_batch_size,
         }
         torch.save(dataset, path)
 
@@ -220,6 +262,8 @@ class TorchUniformBuffer(BaseBuffer):
 
         self._num_in_buffer = n
         self._current_idx = dataset["current_idx"]
+        # needed for ages and SWD; buffers saved before this key existed fall back to the next `add`
+        self._add_batch_size = dataset.get("add_batch_size", self._add_batch_size)
         # Note: _n_step_transitions is intentionally not saved/loaded.
         # At most (n_step - 1) in-flight transitions are lost, which is negligible.
         self._n_step_transitions.clear()

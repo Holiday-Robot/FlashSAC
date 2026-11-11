@@ -1,3 +1,7 @@
+import csv
+import os
+import time
+from datetime import datetime
 from typing import Any, Optional
 
 import numpy as np
@@ -92,6 +96,49 @@ class TensorboardTrainerLogger:
     def reset(self) -> None:
         self.average_meter_dict = AverageMeterDict()
         self.media_dict.clear()
+
+
+class CsvTrainerLogger:
+    """
+    Wraps another logger and mirrors every scalar it logs to `<log_dir>/metrics.csv`
+    (one row per `log_metric` call, one column per metric). The run config is saved next to it.
+    """
+
+    def __init__(self, cfg: Any, logger: Any):
+        self._logger = logger
+        timestamp = datetime.now().strftime("%m%d_%H%M%S")
+        self.log_dir = f"logs/{cfg.group_name}/{cfg.exp_name}/{cfg.env.env_name}/seed{cfg.seed}_{timestamp}"
+        os.makedirs(self.log_dir, exist_ok=True)
+        OmegaConf.save(cfg, os.path.join(self.log_dir, "config.yaml"))
+        self._path = os.path.join(self.log_dir, "metrics.csv")
+        self._columns = ["env_step", "wall_time"]
+        self._rows: list[dict[str, float]] = []
+        self._start_time = time.perf_counter()
+
+    def update_metric(self, **kwargs: Any) -> None:
+        self._logger.update_metric(**kwargs)
+
+    def log_metric(self, step: int) -> None:
+        row = {"env_step": step, "wall_time": time.perf_counter() - self._start_time}
+        row.update(self._logger.average_meter_dict.averages())
+        self._rows.append(row)
+
+        new_columns = [k for k in row if k not in self._columns]
+        self._columns += new_columns
+        # a new metric changes the header, so the file is rewritten; otherwise the row is appended
+        rewrite = bool(new_columns) or len(self._rows) == 1
+        with open(self._path, "w" if rewrite else "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=self._columns, restval="")
+            if rewrite:
+                writer.writeheader()
+                writer.writerows(self._rows)
+            else:
+                writer.writerow(row)
+
+        self._logger.log_metric(step)
+
+    def reset(self) -> None:
+        self._logger.reset()
 
 
 class AverageMeter:

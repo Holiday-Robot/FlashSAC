@@ -12,6 +12,17 @@ buffer_min_length: 10_000
 buffer_device_type: 'cuda'
 sample_batch_size: 2048
 
+# Replay sampling
+#   uniform: FlashSAC default.
+#   swd:     WarpSAC's Sample Weight Decay, p(i) ∝ max(swd_min_weight, 1 - age(i) / swd_decay_steps),
+#            with age in interaction steps.
+#   laber:   draw laber_multiplier * sample_batch_size transitions uniformly, then keep sample_batch_size
+#            of them with probability ∝ TD surprise (importance-weighted critic loss).
+sampler: 'uniform'        # ['uniform', 'swd', 'laber']
+swd_decay_steps: 2000
+swd_min_weight: 0.1
+laber_multiplier: 4
+
 normalize_reward: true
 normalized_G_max: 5.0
 
@@ -32,7 +43,22 @@ actor_hidden_dim: 128
 actor_bc_alpha: 0.0
 actor_noise_zeta_mu: 2.0
 actor_noise_zeta_max: 16
+
+# Actor delay = number of critic updates per actor update.
+#   fixed: delay = actor_update_period (FlashSAC default: 2).
+#   ema:   every `interval` critic updates, with e = mean TD error over those updates,
+#          delay = clip(scale * e / EMA_beta(e), min, max).
+actor_delay: 'fixed'      # ['fixed', 'ema']
 actor_update_period: 2
+actor_delay_ema_interval: 100
+actor_delay_ema_beta: 0.9
+actor_delay_ema_scale: 2.0
+actor_delay_ema_min: 1.0
+actor_delay_ema_max: 8.0
+# What drives the actor/temperature learning-rate schedule.
+#   actor_step:  number of actor updates (FlashSAC default; the schedule then depends on the actor delay).
+#   global_step: number of critic updates (same schedule for every actor delay).
+actor_lr_schedule: 'actor_step'   # ['actor_step', 'global_step']
 
 critic_num_blocks: 2
 critic_hidden_dim: 256

@@ -1,4 +1,5 @@
 import math
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -194,10 +195,22 @@ class EnsembleUnitBatchNorm(nn.Module):
         self.register_buffer("running_mean", torch.zeros(num_ensemble, input_dim))
         self.register_buffer("running_var", torch.ones(num_ensemble, input_dim))
 
-    def forward(self, x: torch.Tensor, training: bool) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, training: bool, sample_weights: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """
+        sample_weights: (B,) importance weights of a non-uniformly sampled batch. The batch statistics are
+            then weighted so that they estimate the statistics of uniformly sampled data.
+        """
         if training:
-            mean = x.mean(dim=1, keepdim=True)
-            var = x.var(dim=1, correction=0, keepdim=True)
+            if sample_weights is None:
+                mean = x.mean(dim=1, keepdim=True)
+                var = x.var(dim=1, correction=0, keepdim=True)
+            else:
+                # float32: the normalized weights are too small for FP16 AMP
+                w = (sample_weights.float() / sample_weights.float().sum()).view(1, -1, 1)
+                x32 = x.float()
+                mean32 = (x32 * w).sum(dim=1, keepdim=True)
+                var32 = ((x32 - mean32).square() * w).sum(dim=1, keepdim=True)
+                mean, var = mean32.to(x.dtype), var32.to(x.dtype)
             with torch.no_grad():
                 B = x.shape[1]
                 # Cast to float32 for running stats (BatchNorm uses float32 even in AMP)
@@ -241,8 +254,8 @@ class EnsembleFlashSACEmbedder(nn.Module):
         self.norm = EnsembleUnitBatchNorm(num_ensemble, input_dim)
         self.w = EnsembleUnitLinear(num_ensemble, input_dim, hidden_dim)
 
-    def forward(self, x: torch.Tensor, training: bool) -> torch.Tensor:
-        x = self.norm(x, training=training)
+    def forward(self, x: torch.Tensor, training: bool, sample_weights: Optional[torch.Tensor] = None) -> torch.Tensor:
+        x = self.norm(x, training=training, sample_weights=sample_weights)
         x = self.w(x)
         return x
 
@@ -255,13 +268,13 @@ class EnsembleFlashSACBlock(nn.Module):
         self.norm1 = EnsembleUnitBatchNorm(num_ensemble, hidden_dim * expansion)
         self.norm2 = EnsembleUnitBatchNorm(num_ensemble, hidden_dim)
 
-    def forward(self, x: torch.Tensor, training: bool) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, training: bool, sample_weights: Optional[torch.Tensor] = None) -> torch.Tensor:
         residual = x
         x = self.w1(x)
-        x = self.norm1(x, training=training)
+        x = self.norm1(x, training=training, sample_weights=sample_weights)
         x = F.relu(x)
         x = self.w2(x)
-        x = self.norm2(x, training=training)
+        x = self.norm2(x, training=training, sample_weights=sample_weights)
         x = F.relu(x)
         x = x + residual
         return x

@@ -9,6 +9,7 @@ exp_name: 'test'
 seed: 0
 
 logger_type: 'tensorboard'  # ['wandb','tensorboard']
+log_csv: true               # also write logs/<group>/<exp>/<env>/seed<seed>_<time>/{metrics.csv,config.yaml}
 save_path: 'models/${group_name}/${exp_name}/${env.env_name}/seed${seed}-TIMESTAMP'
 agent_load_path: null
 buffer_load_path: null

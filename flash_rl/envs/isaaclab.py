@@ -1,4 +1,4 @@
-from typing import Any, Union, cast
+from typing import Any, Optional, Union, cast
 
 import gymnasium as gym
 import numpy as np
@@ -53,6 +53,10 @@ class IsaacLabVectorEnv(
         seed (int):
         action_bounds (float):
         to_numpy (bool): If True, will convert all outputs from jnp.ndarray to np.array.
+        video_dir (str): If given, the first `video_length` steps are recorded to an mp4 file in this directory.
+            Works headless (off-screen rendering).
+        video_length (int): Number of steps to record.
+        follow_robot (bool): If True, the camera follows the robot of the first environment.
     """
 
     def __init__(
@@ -64,10 +68,14 @@ class IsaacLabVectorEnv(
         action_bounds: float,
         to_numpy: bool = True,
         headless: bool = True,
+        video_dir: Optional[str] = None,
+        video_length: int = 500,
+        follow_robot: bool = False,
     ):
         from isaaclab.app import AppLauncher
 
-        app_launcher = AppLauncher(headless=headless, device=device, enable_cameras=not headless)
+        record_video = video_dir is not None
+        app_launcher = AppLauncher(headless=headless, device=device, enable_cameras=record_video or not headless)
         self.simulation_app = app_launcher.app
 
         from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
@@ -80,7 +88,22 @@ class IsaacLabVectorEnv(
         env_cfg.seed = seed
         self.seed = seed
         self.device = device
-        self.envs = gym.make(env_name, cfg=env_cfg, render_mode=None)
+        if follow_robot:
+            env_cfg.viewer.origin_type = "asset_root"
+            env_cfg.viewer.asset_name = "robot"
+            env_cfg.viewer.env_index = 0
+        self.envs = gym.make(env_name, cfg=env_cfg, render_mode="rgb_array" if record_video else None)
+
+        self._video_recorder: Optional[Any] = None
+        if video_dir is not None:
+            self._video_recorder = gym.wrappers.RecordVideo(
+                self.envs,
+                video_folder=video_dir,
+                step_trigger=lambda step: step == 0,
+                video_length=video_length,
+                disable_logger=True,
+            )
+            self.envs = self._video_recorder
 
         self.num_envs = cast(Any, self.envs.unwrapped).num_envs
         self.max_episode_steps = cast(Any, self.envs.unwrapped).max_episode_length
@@ -184,12 +207,20 @@ class IsaacLabVectorEnv(
     def render(self) -> None:
         raise NotImplementedError("We don't support rendering for IsaacLab environments")
 
+    def finish_video(self) -> None:
+        """Write the video file if it is still being recorded (fewer than `video_length` steps were taken)."""
+        if self._video_recorder is not None and self._video_recorder.recording:
+            self._video_recorder.stop_recording()
+
 
 def make_isaaclab_env(
     env_name: str,
     num_envs: int,
     seed: int,
     headless: bool = True,
+    video_dir: Optional[str] = None,
+    video_length: int = 500,
+    follow_robot: bool = False,
 ) -> IsaacLabVectorEnv:
     if env_name not in ACTION_BOUNDS:
         print(f"Action bounds not defined for {env_name}; using default value 1.0.")
@@ -202,5 +233,8 @@ def make_isaaclab_env(
         action_bounds=action_bounds,
         to_numpy=True,
         headless=headless,
+        video_dir=video_dir,
+        video_length=video_length,
+        follow_robot=follow_robot,
     )
     return env

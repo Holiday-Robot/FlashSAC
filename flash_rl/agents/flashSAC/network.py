@@ -1,4 +1,5 @@
 import math
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -94,12 +95,14 @@ class FlashSACDoubleCritic(nn.Module):
         observations: torch.Tensor,
         actions: torch.Tensor,
         training: bool,
+        sample_weights: Optional[torch.Tensor] = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+        """sample_weights: optional (B,) importance weights for the BatchNorm statistics (training only)."""
         x = torch.cat((observations, actions), dim=-1)  # [B, in_dim]
         x = x.unsqueeze(0).expand(self.num_qs, -1, -1)  # [num_qs, B, in_dim]
-        x = self.embedder(x, training)
+        x = self.embedder(x, training, sample_weights)
         for block in self.encoder:
-            x = block(x, training)
+            x = block(x, training, sample_weights)
         x = self.post_norm(x)
         qs, infos = self.predictor(x, training)
         return qs, infos

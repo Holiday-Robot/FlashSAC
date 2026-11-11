@@ -43,12 +43,18 @@ def play(args: argparse.Namespace) -> None:
         torch.backends.cudnn.allow_tf32 = True
         torch.set_float32_matmul_precision("high")
 
-    # Create environment with rendering (headless=False)
+    # Create environment: Isaac Sim viewport, or headless recording to an mp4 file with --video
+    video_dir = None
+    if args.video:
+        video_dir = args.video_dir or os.path.join(checkpoint_path, "videos")
     env = make_isaaclab_env(
         env_name=cfg.env.env_name,
         num_envs=num_envs,
         seed=cfg.seed,
-        headless=False,
+        headless=args.video,
+        video_dir=video_dir,
+        video_length=args.video_length,
+        follow_robot=args.follow_robot,
     )
 
     # Create agent using config (same as train.py)
@@ -68,8 +74,11 @@ def play(args: argparse.Namespace) -> None:
     prev_transition: MutableMapping[str, Tensor] = {"next_observation": observations}
     completed_episodes = 0
     episode_returns = np.zeros(num_envs)
+    num_steps = 0
 
-    while completed_episodes < num_episodes:
+    # with --video, play for the length of the video instead of a number of episodes
+    while num_steps < args.video_length if args.video else completed_episodes < num_episodes:
+        num_steps += 1
         actions = agent.sample_actions(interaction_step=0, prev_transition=prev_transition, training=False)
         actions = np.array(actions)
         next_observations, rewards, terminateds, truncateds, infos = env.step(actions)
@@ -82,11 +91,15 @@ def play(args: argparse.Namespace) -> None:
                 completed_episodes += 1
                 print(f"Episode {completed_episodes}: return = {episode_returns[idx]:.2f}")
                 episode_returns[idx] = 0.0
-                if completed_episodes >= num_episodes:
+                if not args.video and completed_episodes >= num_episodes:
                     break
 
         observations = next_observations
         prev_transition = {"next_observation": observations}
+
+    if args.video:
+        env.finish_video()
+        print(f"Saved video to {video_dir}")
 
     env.close()
 
@@ -99,5 +112,9 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint_path", type=str, required=True, help="Path to agent checkpoint directory")
     parser.add_argument("--num_envs", type=int, default=16, help="Number of parallel environments for visualization")
     parser.add_argument("--num_episodes", type=int, default=10, help="Number of episodes to play")
+    parser.add_argument("--video", action="store_true", help="Record an mp4 headless instead of opening the viewport")
+    parser.add_argument("--video_length", type=int, default=500, help="Number of steps to record (50 steps = 1 s)")
+    parser.add_argument("--video_dir", type=str, default=None, help="Default: <checkpoint_path>/videos")
+    parser.add_argument("--follow_robot", action="store_true", help="Camera follows the robot of environment 0")
     args = parser.parse_args()
     play(args)
